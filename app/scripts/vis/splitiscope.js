@@ -61,6 +61,8 @@ var methods = {
 
     var bottom_surface = svg.append('g');
 
+    var split_surface = svg.append('g');
+
     var data_surface = svg.append('g')
                         .attr('transform','translate('+offset.left+','+offset.top+')');
 
@@ -76,6 +78,31 @@ var methods = {
                         .style('fill-color',function(point) {
                                                 return categoryLabelScale(point[colorLabel]);
                         });
+
+    var splits = split_surface
+                  .selectAll('.split')
+                  .data(split_array)
+                .enter()
+                .append('rect')
+                  .class('split')
+                  .attr('width','')
+                  .attr('height','')
+                  .attr('x','')
+                  .attr('y','')
+                  .style('stroke','red')
+                  .style('stroke-width',0.5)
+                  .style('fill','none')
+                  .style('stroke-opacity','density')
+                  .on('mouseover',function(){
+                    var rect = d3.select(this);
+                    d3.select('.split').style('stroke-opacity',0);
+                    rect.style('stroke-opacity',1.0);
+                  })
+                  .on('mouseout',function(){
+                    var rect = d3.select(this);
+                    d3.select('.split').style('stroke-opacity','density');
+                  })
+
 
             return this;
   },      
