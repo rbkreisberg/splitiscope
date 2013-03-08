@@ -41,16 +41,19 @@ var width = 500,
     data_array = [],
     data ={ },
     radius = 4,
+    offset = {top:15, bottom: 15, left:30, right: 10},
     colorLabel ='target';
 
 var methods = {
 
   draw: function(options) {
     var $this = $(this);
+
+    
+    setScales();
           // if (selection.nodeType === undefined) { selection = window.document.body; } //check if we're on a node.  
-    var plotWidth = width - 40;
-    var plotHeight = height - 30;     
-    offset = {top:15, bottom: 15, left:30, right: 10};
+    var plotWidth = width - offset.left - offset.right;
+    var plotHeight = height - offset.top - offset.bottom;   
 
           //draw chart
     var svg = d3.svg.select($this.el)
@@ -59,12 +62,16 @@ var methods = {
                     .attr('height',height)
                     .attr('width',width);
 
-    var bottom_surface = svg.append('g');
+  var plot_offset = svg.append('g')
+                        .attr('transform','translate('+offset.left+','+offset.top+')')
+                        .attr('height',plotHeight)
+                        .attr('width',plotWidth)
 
-    var split_surface = svg.append('g');
+    var bottom_surface = plot_offset.append('g');
 
-    var data_surface = svg.append('g')
-                        .attr('transform','translate('+offset.left+','+offset.top+')');
+    var split_surface = plot_offset.append('g');
+
+    var data_surface = plot_offset.append('g');
 
     var data_points = data_surface
                         .selectAll('.data_point')
@@ -72,11 +79,14 @@ var methods = {
                       .enter()
                       .append('circle')
                         .class('data_point')
-                        .attr('cx', 'x')
-                        .attr('cy', 'y')
+                        .attr('cx', function(point) { return xScale(point.x);})
+                        .attr('cy', function(point) { return yScale(point.y);})
                         .attr('r',radius)
-                        .style('fill-color',function(point) {
+                        .style('fill',function(point) {
                                                 return categoryLabelScale(point[colorLabel]);
+                        })
+                        .style('fill-opacity', function(point) {
+                            return _.isUndefined(point.splits_on_x) ? 1.0 : caseSplitsOpacityScale(point.splits_on_x);
                         });
 
     var splits = split_surface
@@ -85,14 +95,14 @@ var methods = {
                 .enter()
                 .append('rect')
                   .class('split')
-                  .attr('width','')
-                  .attr('height','')
-                  .attr('x','')
-                  .attr('y','')
+                  .attr('width',4)
+                  .attr('height',plotHeight)
+                  .attr('x',function() { return splitXScale(d3.index); })
+                  .attr('y',0)
                   .style('stroke','red')
                   .style('stroke-width',0.5)
                   .style('fill','none')
-                  .style('stroke-opacity','density')
+                  .style('stroke-opacity', splitOpacityScale)
                   .on('mouseover',function(){
                     var rect = d3.select(this);
                     d3.select('.split').style('stroke-opacity',0);
@@ -103,13 +113,13 @@ var methods = {
                     d3.select('.split').style('stroke-opacity','density');
                   })
 
-
             return this;
   },      
 
   data : function(data_to_plot) {
         if (arguments.length < 1) return data_array;
         data_array = data_to_plot;
+        parseData();
         return this;
   },
 
@@ -122,6 +132,12 @@ var methods = {
   height : function(height_to_set){
         if (arguments.length < 1) return height;
         height = height_to_set;
+        return this;
+},
+
+  offset : function(offset_to_set){
+        if (arguments.length < 1) return offset;
+        offset = offset_to_set;
         return this;
 },
 
@@ -145,8 +161,6 @@ var methods = {
 
 };
 
-
-
 function parseData() {
   if (data_array.length < 1) {
       console.log('Empty data array.  Nothing to plot.');
@@ -157,7 +171,6 @@ function parseData() {
   data = _.map(element_properties, function(property) {
     return _.pluck(data_array,property);
   });
-
 
 }
 
@@ -175,9 +188,18 @@ function setScales() {
 
   categoryLabelScale = d3.scale.ordinal().domain(data[colorLabel]).range(colorArray);
 
+  split_bin_number = split_array[0].length
+  split_bin_start = xScale(split.low)+(.5*split.binsize);
+  split_bin_end = split_bin_start +  (split_bin_number-1)*split.binsize;
+
+  splitOpacityScale = d3.scale.linear().domain([0,d3.max(split_array)]).range(0.3,0.9);
+  splitXScale = d3.scale.linear().domain([0,split_bin_number-1]).range(split_bin_start, split_bin_end);
+
+  caseSplitsOpacityScale = d3.scale.linear().domain([0,d3.max(_.pluck(data_array,'splits_on_x'))]).range(0.3,0.9);
+
 }
 
 
 })( jQuery );
 
-})
+});
