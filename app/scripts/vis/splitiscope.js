@@ -37,11 +37,11 @@ var __ = {
     split_array : [],
  };
 
-  _.extend(__, config)
+  _.extend(__, config);
     
 
   var splitiscope = function(selection) {
-    selection = pc.selection = d3.select(selection);
+    selection = splitiscope.selection = d3.select(selection);
 
     __.width = selection[0][0].clientWidth;
     __.height = selection[0][0].clientHeight;
@@ -51,7 +51,7 @@ var __ = {
           //draw chart
     splitiscope.svg = selection
                     .append('svg')
-                    .class('splitiscope')
+                    .attr('class','splitiscope')
                     .attr('height',__.height)
                     .attr('width',__.width );
 
@@ -60,11 +60,11 @@ var __ = {
                         .attr('height',h())
                         .attr('width',w())
 
-    var bottom_surface = plot_margin.append('g');
+    var bottom_surface = plot_offset.append('g');
 
-    splitiscope.split_surface = plot_margin.append('g');
+    splitiscope.split_surface = plot_offset.append('g');
 
-    splitiscope.data_surface = plot_margin.append('g');
+    splitiscope.data_surface = plot_offset.append('g');
 
             return splitiscope;
   };
@@ -82,6 +82,9 @@ var __ = {
       },
       xscale = d3.scale.ordinal(),
       yscale = {},
+      caseSplitsOpacityscale,
+      splitxscale,
+      splitOpacityscale,
       dragging = {},
       axis = d3.svg.axis().orient("left").ticks(5),
       g; // groups for axes, brushes
@@ -91,10 +94,10 @@ var __ = {
     .on("width", function(d) { splitiscope.resize(); })
     .on("height", function(d) { splitiscope.resize(); })
     .on("margin", function(d) { splitiscope.resize(); })
-    .on("data", function(d) { console.log('new data');});
+    .on("data", function(d) { parseData(); console.log('new data');});
    
 
-  splitiscope.toString = function() { return "Parallel Coordinates: " + __.dimensions.length + " dimensions (" + d3.keys(__.data[0]).length + " total) , " + __.data.length + " rows"; };
+  splitiscope.toString = function() { return "Splitiscope: " + __.splits.length + " splits (" + d3.keys(__.data[0]).length + " total) , " + __.data.length + " rows"; };
 
   // expose the state of the chart
   splitiscope.state = __;
@@ -110,8 +113,8 @@ var __ = {
         if (!arguments.length) return state[key];
         var old = state[key];
         state[key] = x;
-        side_effects[key].call(pc,{"value": x, "previous": old});
-        events[key].call(pc,{"value": x, "previous": old});
+        side_effects[key].call(splitiscope,{"value": x, "previous": old});
+        events[key].call(splitiscope,{"value": x, "previous": old});
         return obj;
       };
     });
@@ -124,10 +127,10 @@ splitiscope.render = function() {
                         .data(__.data)
                       .enter()
                       .append('circle')
-                        .class('data_point')
+                        .attr('class','data_point')
                         .attr('cx', function(point) { return xscale(point.x[d3.index]);})
                         .attr('cy', function(point) { return yscale(point.y[d3.index]);})
-                        .attr('r',radius)
+                        .attr('r',__.radius)
                         .style('fill',function(point) {
                                                 return categoryLabelScale(point[__.colorLabel]);
                         })
@@ -140,7 +143,7 @@ splitiscope.render = function() {
                   .data(__.split_array)
                 .enter()
                 .append('rect')
-                  .class('split')
+                  .attr('class','split')
                   .attr('width',4)
                   .attr('height',h())
                   .attr('x',function() { return splitxscale(d3.index); })
@@ -173,25 +176,18 @@ splitiscope.render = function() {
             .attr('width',w())
             .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
   return this;
-}
+};
 
-  splitiscope.splits = function(splits_to_plot) {
-        if (arguments.length < 1) return splits;
-        split_array = splits_to_plot.bins;
-        splits = splits_to_plot;
-        setScales();
-        return this;
-  };
 
 function parseData() {
-  if ((data.x).length < 1) {
+  if ((__.data.x).length < 1) {
       console.log('Empty data array.  Nothing to plot.');
       return;
     }
-  var element_properties = _.keys(data);
-  if ((data.x).length > 0) {
-    xDataType =  typeof data.x[0] === 'string' ? 'ordinal' : 'numerical';
-    yDataType =  typeof data.y[0] === 'string' ? 'ordinal' : 'numerical';
+  var element_properties = _.keys(__.data);
+  if ((__.data.x).length > 0) {
+    __.xDataType =  typeof __.data.x[0] === 'string' ? 'ordinal' : 'numerical';
+    __.yDataType =  typeof __.data.y[0] === 'string' ? 'ordinal' : 'numerical';
   }
 
   setScales();
@@ -201,31 +197,31 @@ function parseData() {
 }
 
 function setScales() {
-  xscale = xDataType === "ordinal" ?
-                  d3.scale.ordinal().domain(data.x).rangeRoundBands([0,w()],0) :
-                  d3.scale.linear().domain(d3.extent(data.x)).range([0,w()]);
+  xscale = __.xDataType === "ordinal" ?
+                  d3.scale.ordinal().domain(__.data.x).rangeRoundBands([0,w()],0) :
+                  d3.scale.linear().domain(d3.extent(__.data.x)).range([0,w()]);
 
-  yscale = yDataType === "ordinal" ?
-                  d3.scale.ordinal().domain(data.y).rangeRoundBands([h(),0],0) :
-                  d3.scale.linear().domain(d3.extent(data.y)).range([h(),0]);
+  yscale = __.yDataType === "ordinal" ?
+                  d3.scale.ordinal().domain(__.data.y).rangeRoundBands([h(),0],0) :
+                  d3.scale.linear().domain(d3.extent(__.data.y)).range([h(),0]);
 
   var numberOfCategories = _.uniq(__.data[__.colorLabel]).length;
   var colorArray = _.first(__.pointColors,numberOfCategories);
 
-  categoryLabelScale = d3.scale.ordinal().domain(data[__.colorLabel]).range(colorArray);
+  categoryLabelScale = d3.scale.ordinal().domain(__.data[__.colorLabel]).range(colorArray);
 
-  split_bin_number = split_array[0].length;
+  split_bin_number = __.split_array[0].length;
   split_bin_start = xscale(split.low)+(.5*split.binsize);
   split_bin_end = split_bin_start +  (split_bin_number-1)*split.binsize;
 
-  splitOpacityscale = d3.scale.linear().domain([0,d3.max(split_array)]).range(0.3,0.9);
+  splitOpacityscale = d3.scale.linear().domain([0,d3.max(__.split_array)]).range(0.3,0.9);
   splitxscale = d3.scale.linear().domain([0,split_bin_number-1]).range(split_bin_start, split_bin_end);
 
   caseSplitsOpacityscale = d3.scale.linear().domain([0,d3.max(_.pluck(__.data_array,'splits_on_x'))]).range(0.3,0.9);
 
 }
 
-  
+  return splitiscope;
 };
 
 
