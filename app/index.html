@@ -22,12 +22,17 @@
         }
       
         .axis path, .axis line {
-                 fill: none;
+                fill: none;
                 stroke: #000;
-                 shape-rendering: crispEdges;
+                stroke-width: 1.0px;
+                shape-rendering: crispEdges;
             }
+        
+        .y.axis path,  .y.axis line{
+            stroke:#aaa;
+        }
 
-        .x.axis path {
+        .x.axis path, .x.axis line {
                 stroke:none;
                 fill:none;
         }
