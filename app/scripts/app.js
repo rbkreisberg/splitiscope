@@ -17,7 +17,7 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
     });
 
     test_data.y = _.map(_.range(100),function(value) {
-                return Math.round(Math.random()*(y_range.may - y_range.min) + y_range.min);
+                return (Math.random()*(y_range.max - y_range.min) + y_range.min);
     });
 
    test_data.label = _.map(_.range(100),function(value) {
@@ -25,13 +25,13 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
     });
 
    test_data.splits_on_x = _.map(_.range(100),function(value) {
-                return Math.round(Math.random()*(splits_range.may - splits_range.min) + splits_range.min);
+                return Math.round(Math.random()*(splits_range.max - splits_range.min) + splits_range.min);
     });
 
     var test_split = {
 
-                bins: _.map(_.range(10), function(value) {
-                    Math.random() * 100 / (Math.abs(value-5))
+                bins: _.map(_.range(1,9), function(value) {
+                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* 100;
                 }),
                 low: x_range.min + 1,
                 binsize: ((x_range.max -1) - (x_range.min +1)) / 10
@@ -44,7 +44,13 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
             //     .defer(function() { return true;})
             //     .await(function(error, data1){
             //         if (error) { errorMsg(error);}
-                    var splitiscope = split_vis();
+                    var splitiscope = split_vis({
+                        radius: 12,
+                        margin : {
+                                    top: 10, left: 10, bottom: 30, right: 30
+                        }
+
+                    });
                     splitiscope('#plot').data(test_data).splits(test_split).render();
                 // });
         }
