@@ -39,8 +39,10 @@ var __ = {
   _.extend(__, config);
 
   var events = d3.dispatch.apply(this,["render", "resize", "highlight", "brush"].concat(d3.keys(__))),
-      w = function() { return __.width - __.margin.right - __.margin.left - padding.right - padding.left},
-      h = function() { return __.height - __.margin.top - __.margin.bottom - padding.top - padding.bottom },
+      outerWidth = function() { return __.width - __.margin.right - __.margin.left },
+      outerHeight = function() { return __.height - __.margin.top - __.margin.bottom },
+      plotWidth = function() { return outerWidth() - padding.right - padding.left},
+      plotHeight = function() { return outerHeight() - padding.top - padding.bottom },
       flags = {
         brushable: false,
         reorderable: false,
@@ -57,7 +59,8 @@ var __ = {
       splitOpacityscale,
       splitColorscale,
       dragging = {},
-      padding = { top: 4, bottom: 4, left: 4, right: 4 },
+      selected = null,
+      padding = { top: 24, bottom: 4, left: 4, right: 4 },
       split_array = undefined,
       shapes = ['circle','cross','diamond','square','triangle-down','triangle-up'],
       symbolSize = Math.pow(__.radius,2),
@@ -65,15 +68,15 @@ var __ = {
       symbolMap = d3.scale.ordinal().domain([0,5]).range(shapes),
       symbolFunction = _.compose(symbol.type, symbolMap),
       data_array = [],
-      yaxis = d3.svg.axis().orient("right").ticks(5).tickSize(-1*w()),
-      xaxis = d3.svg.axis().orient("bottom").ticks(5).tickSize(2),
+      yaxis = d3.svg.axis().orient("right").ticks(5).tickSize(-1*plotWidth(),4,4),
+      xaxis = d3.svg.axis().orient("bottom").ticks(5),
       bottom_surface, split_surface, data_surface; // groups for axes, brushes
 
   // side effects for setters
   var side_effects = d3.dispatch.apply(this,d3.keys(__))
-    .on("width", function(d) { splitiscope.resize(); })
-    .on("height", function(d) { splitiscope.resize(); })
-    .on("margin", function(d) { splitiscope.resize(); })
+    //.on("width", function(d) { splitiscope.resize(); })
+    //.on("height", function(d) { splitiscope.resize(); })
+    //.on("margin", function(d) { splitiscope.resize(); })
     .on("radius", function(d) { symbolSize = Math.pow(__.radius,2);})
     .on("data", function(d) { parseData(); console.log('new data');})
     .on("splits", function(d) { parseSplits(); console.log('new splits');});
@@ -84,6 +87,8 @@ var __ = {
 
     __.width = selection[0][0].clientWidth;
     __.height = selection[0][0].clientHeight;
+
+    setAxes();
 
     // if (selection.nodeType === undefined) { selection = window.document.body; } //check if we're on a node.  
   
@@ -100,18 +105,30 @@ var __ = {
                     .attr("id", "clip-rect")
                     .attr("x", "0")
                     .attr("y", "0")
-                    .attr("width", w() + padding.left+ padding.right)
-                    .attr("height", h()+ padding.bottom +  padding.top);
+                    .attr("width", outerWidth())
+                    .attr("height", outerHeight());
+
+    splitiscope.svg.select("defs")
+                .append("svg:marker")
+                .attr("id", 'arrow_end')
+                .attr("viewBox", "0 0 10 10")
+                .attr("refX", 0)
+                .attr("refY", 5)
+                .attr("markerUnits",'strokeWidth')
+                .attr("markerWidth", 4)
+                .attr("markerHeight", 3)
+                .attr("orient", "auto")
+              .append("svg:path")
+                .attr("d", "M0,0L10,5L0,10z");
 
     var plot_offset = splitiscope.svg.append('g')
                         .attr('transform','translate('+__.margin.left+','+ __.margin.top+')');
                        
-    bottom_surface = plot_offset.append('g');
+    bottom_surface = plot_offset.append('g')
+                  .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
 
     var top_surface = plot_offset.append('g')
-                  .attr('clip-path','url(#plot_clip)')
-                        .attr('height',h()+ padding.bottom +  padding.top  )
-                        .attr('width',w() + padding.left+ padding.right);
+                  .attr('clip-path','url(#plot_clip)');
 
     split_surface = top_surface.append('g')
     .attr('transform','translate(' + padding.left + ',' + padding.top + ')');                    
@@ -158,12 +175,12 @@ splitiscope.render = function() {
 
   function drawAxes() {
     bottom_surface.append('g')
-    .attr('transform','translate('+ (w()) +',0)')
+    .attr('transform','translate('+ (plotWidth()) +',0)')
     .attr('class','y axis')
     .call(yaxis);
 
     bottom_surface.append('g')
-    .attr('transform','translate(0,' + (h() ) +')')
+    .attr('transform','translate(0,' + (plotHeight()) +')')
     .attr('class','x axis')
     .call(xaxis);
   }
@@ -195,8 +212,8 @@ splitiscope.render = function() {
         .splitiscope("height", __.height);
 
       splitiscope.svg
-              .attr('height',h())
-              .attr('width',w())
+              .attr('height',plotHeight())
+              .attr('width',plotWidth())
               .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
     return this;
   };
@@ -210,52 +227,75 @@ splitiscope.render = function() {
                   .enter()
                   .append('g')
                   .attr('class','splits')
+                   .on('click', function(split_val,i) {
+                          if (selected === i) {
+                            selected = null;
+                            clearSplitSelection();
+                            return;
+                          }
+                          selected = i;
+                          makeSplitSelection(this,selected);
+                          console.log('click');
+                          return;
+                       })
                    .on('mouseover',function(split_val,i){
-                      var rect = d3.select(this).select('.split_line');
-                      d3.selectAll('.split_line').style('stroke-opacity',0).style('fill-opacity',0);
-                      rect.style('stroke-opacity',1).style('fill-opacity',1);
-
-                      d3.selectAll('.data_point')
-                        .filter(function(point) { return xscale(point.x) < splitxscale(i); })
-                        .attr('d',symbolFunction(0));
-
-
-                      d3.selectAll('.data_point')
-                        .filter(function(point) { return xscale(point.x) >= splitxscale(i); })
-                        .attr('d',symbolFunction(1));
-
+                      if (selected === null) makeSplitSelection(this,i);
                     })
                     .on('mouseout',function(split_val){
-                       var rect = d3.select(this).select('.split_line');
-                      d3.selectAll('.split_line').style('stroke-opacity',1).style('fill-opacity',1);
-                      d3.selectAll('.data_point').attr('d',symbolFunction(0));
+                      if (selected === null) clearSplitSelection();
                     });
-
 
                   splits.append('rect')
                   .attr('class','split_bubble')
                   .attr('x',function(d,i) { return splitxscale(i)-10;})
                     .attr('width', 20)
-                    .attr('y',0)
-                    .attr('height',h())
-                    .style('stroke','white')
-                    .style('stroke-opacity','1')
-                    .style('stroke-width',2.0)
-                    .style('fill','white')
-                    .style('fill-opacity','1');
-                   
-
-                  splits.append('line')
-                    .attr('class','split_line')
-                    .attr('x1',function(d,i) { return splitxscale(i);})
-                    .attr('x2',function(d,i) { return splitxscale(i);})
-                    .attr('y1',0)
-                    .attr('y2',h())
-                    .style('stroke-dasharray','9, 5')
+                    .attr('y',-1 * padding.top)
+                    .attr('height',padding.top +10)
                     .style('stroke',splitColorscale)
-                    .style('stroke-width',2.0)
-                    .style('fill',splitColorscale);
+                    .style('stroke-opacity','1')
+                    .style('stroke-width',0.5)
+                    .style('fill','transparent')
+                    .style('fill-opacity','1');
+
+          var split_line = splits.append('g')
+                    .attr('class','split_line')
+                    .attr('transform',function(d,i) { return 'translate('+splitxscale(i)+','+0+')';});
                     
+                  split_line 
+                    .append('path')
+                    .attr('d',function(d,i) {
+                      return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
+                      })
+                    .style('stroke',splitColorscale)
+                    .style('stroke-width',4.0)
+                    .style('fill',splitColorscale);
+
+                    split_line.append("path")
+                         .style('stroke',splitColorscale)
+                      .style('stroke-width',4.0)
+                    .style('fill',splitColorscale)
+                      .attr("d", "M5,0L-5,0L0,5z");
+  
+  }
+
+  function makeSplitSelection(el,index){
+       var split = d3.select(el).selectAll('.split_line, .split_bubble');
+                      d3.selectAll('.split_line, .split_bubble').style('stroke-opacity',0).style('fill-opacity',0);
+                      split.style('stroke-opacity',1).style('fill-opacity',1);
+
+                      d3.selectAll('.data_point')
+                        .filter(function(point) { return xscale(point.x) < splitxscale(index); })
+                        .attr('d',symbolFunction(0));
+
+                      d3.selectAll('.data_point')
+                        .filter(function(point) { return xscale(point.x) >= splitxscale(index); })
+                        .attr('d',symbolFunction(1));
+
+  }
+
+  function clearSplitSelection(){
+                      d3.selectAll('.split_line, .split_bubble').style('stroke-opacity',1).style('fill-opacity',1);
+                      d3.selectAll('.data_point').attr('d',symbolFunction(0));
   }
 
 
@@ -288,12 +328,12 @@ splitiscope.render = function() {
 
    function setDataScales() {
     xscale = __.xDataType === "ordinal" ?
-                     d3.scale.ordinal().domain(__.data.x).rangeRoundBands([0,w()],0) :
-                     d3.scale.linear().domain(d3.extent(__.data.x)).range([0,w()]);
+                     d3.scale.ordinal().domain(__.data.x).rangeRoundBands([10,plotWidth()-10],0) :
+                     d3.scale.linear().domain(d3.extent(__.data.x)).range([10,plotWidth()-10]);
    
     yscale = __.yDataType === "ordinal" ?
-                    d3.scale.ordinal().domain(__.data.y).rangeRoundBands([h(),0],0) :
-                    d3.scale.linear().domain(d3.extent(__.data.y)).range([h(),0]);
+                    d3.scale.ordinal().domain(__.data.y).rangeRoundBands([plotHeight()-10,10],0) :
+                    d3.scale.linear().domain(d3.extent(__.data.y)).range([plotHeight()-10,10]);
 
     var numberOfCategories = _.uniq(__.data[__.colorLabel]).length;
     var colorArray = _.first(__.pointColors,numberOfCategories);
@@ -330,8 +370,8 @@ splitiscope.render = function() {
 
   function setAxes() {
     
-    yaxis.scale(yscale);
-    xaxis.scale(xscale);
+    yaxis.scale(yscale).tickSize(-1*plotWidth()).ticks(5);
+    xaxis.scale(xscale).tickSize(2).ticks(5);
 
     return splitiscope;
   }
