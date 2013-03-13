@@ -2,13 +2,13 @@
   "name": "splitiscope",
   "version": "0.0.0",
   "dependencies": {
-    "sass-bootstrap": "git://github.com/jlong/sass-twitter-bootstrap.git#~2.3.0",
+    "sass-bootstrap": "git://github.com/jlong/sass-twitter-bootstrap.git#~2.3.1",
     "requirejs": "git://github.com/jrburke/requirejs#~2.1.4",
     "modernizr": "git://github.com/Modernizr/Modernizr.git#~2.6.2",
     "jquery": "git://github.com/components/jquery.git#~1.9.1",
     "d3": "git://github.com/mbostock/d3.git#~3.0.8",
     "underscore": "git://github.com/documentcloud/underscore.git#~1.4.4",
     "backbone": "git://github.com/documentcloud/backbone.git#~0.9.10",
-    "queue-async": "~1.0.1"
+    "queue-async": "git://github.com/mbostock/queue#~1.0.1"
   }
 }
