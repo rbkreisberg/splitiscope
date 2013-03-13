@@ -28,13 +28,22 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
                 return Math.round(Math.random()*(splits_range.max - splits_range.min) + splits_range.min);
     });
 
-    var test_split = {
+    var test_split_x = {
 
                 bins: _.map(_.range(1,9), function(value) {
                    return Math.pow(value+1,-1*Math.abs((value-5)/10))* 100;
                 }),
                 low: x_range.min + 1,
                 binsize: ((x_range.max -1) - (x_range.min +1)) / 10
+    };
+
+    var test_split_y = {
+
+                bins: _.map(_.range(1,9), function(value) {
+                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* 100;
+                }),
+                low: y_range.min + 1,
+                binsize: ((y_range.max -1) - (y_range.min +1)) / 10
     };
 
     var Application = {
@@ -51,7 +60,7 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
                         }
 
                     });
-                    splitiscope('#plot').data(test_data).splits(test_split).render();
+                    splitiscope('#plot').data(test_data).splits({x:test_split_x, y: test_split_y}).render();
                 // });
         }
     };
