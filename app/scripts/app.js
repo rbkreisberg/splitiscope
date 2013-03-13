@@ -10,28 +10,33 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
         y_range = { min :-4, max : 4},
         splits_range = { min : 20, max : 200},
         label_list = ['high', 'low'],
-        test_data = {};
+        test_data = {},
+        num = 500;
 
-    test_data.x = _.map(_.range(100),function(value) {
-                return Math.round(Math.random()*(x_range.max - x_range.min) + x_range.min);
+    test_data.x = _.map(_.range(num),function(value) {
+                return (Math.random()*(x_range.max - x_range.min) + x_range.min);
     });
 
-    test_data.y = _.map(_.range(100),function(value) {
+    test_data.y = _.map(_.range(num),function(value) {
                 return (Math.random()*(y_range.max - y_range.min) + y_range.min);
     });
 
-   test_data.label = _.map(_.range(100),function(value) {
+   test_data.label = _.map(_.range(num),function(value) {
                 return label_list[Math.round(Math.random() * (label_list.length-1))];
     });
 
-   test_data.splits_on_x = _.map(_.range(100),function(value) {
+   test_data.splits_on_x = _.map(_.range(num),function(value) {
                 return Math.round(Math.random()*(splits_range.max - splits_range.min) + splits_range.min);
+    });
+
+   test_data.id = _.map(_.range(num),function(value) {
+                return String.fromCharCode.apply(this, _.map(_.range(5),function()  { return Math.random()*26 + 65;}));
     });
 
     var test_split_x = {
 
                 bins: _.map(_.range(1,9), function(value) {
-                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* 100;
+                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
                 }),
                 low: x_range.min + 1,
                 binsize: ((x_range.max -1) - (x_range.min +1)) / 10
@@ -40,7 +45,7 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
     var test_split_y = {
 
                 bins: _.map(_.range(1,9), function(value) {
-                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* 100;
+                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
                 }),
                 low: y_range.min + 1,
                 binsize: ((y_range.max -1) - (y_range.min +1)) / 10
@@ -49,18 +54,34 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
     var Application = {
         initialize: function(){
             // queue()
-            //     //.defer(d3.json,'http://glados1.systemsbiology.net:3335/svc/data/analysis/rf-leaves/layouts/2013_02_21_ms_ITMI_DF3b_no_NPF_M_FM_3_hilevel.fm_NB_TermCategory_pred_17_12800_10000_1000_4/fiedler/2013_02_21_ms_ITMI_DF3b_no_NPF_M_FM_3_hilevel.fm_NB_TermCategory_pred_17_12800_10000_1000_4.cutoff.0.0.json')
+            //     //.defer(d3.json, 'http://')
             //     .defer(function() { return true;})
             //     .await(function(error, data1){
             //         if (error) { errorMsg(error);}
-                    var splitiscope = split_vis({
-                        radius: 12,
-                        margin : {
-                                    top: 10, left: 10, bottom: 30, right: 30
-                        }
+                    // var splitiscope = split_vis({
+                    //     radius: 12,
+                    //     margin : {
+                    //                 top: 10, left: 10, bottom: 30, right: 30
+                    //     }
 
-                    });
-                    splitiscope('#plot').data(test_data).splits({x:test_split_x, y: test_split_y}).render();
+                    // });
+                    var plot = function(data) {
+                            var splitiscope = split_vis({
+                                radius: 12,
+                                margin : {
+                                            top: 10, left: 10, bottom: 30, right: 30
+                                }
+                            });
+                            $('#plot').empty();
+                            splitiscope('#plot')
+                            .data(data)
+                            .splits({x:test_split_x, y: test_split_y})
+                            .on('partition',function(data) {
+                                            plot(data);
+                                })
+                            .render();
+                        };
+                plot(test_data);
                 // });
         }
     };
