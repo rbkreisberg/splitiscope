@@ -38,13 +38,12 @@ var __ = {
     xDataType : 'numerical',
     yDataType : 'numerical',
     data : {x:[],y:[], label:[] },
-    splits : {},
-    
+    splits : {},   
  };
 
   _.extend(__, config);
 
-  var events = d3.dispatch.apply(this,["render", "resize", "highlight", "brush"].concat(d3.keys(__))),
+  var events = d3.dispatch.apply(this,["render", "resize", "highlight", "brush", "partition"].concat(d3.keys(__))),
       outerWidth = function() { return __.width - __.margin.right - __.margin.left },
       outerHeight = function() { return __.height - __.margin.top - __.margin.bottom },
       plotWidth = function() { return outerWidth() - padding.right - padding.left},
@@ -63,7 +62,6 @@ var __ = {
                 y : {}
               },
       caseSplitsOpacityscale,
-      caseSplitsColorscale,
       dragging = {},
       selected = {x: null, y: null},
       padding = { top: 24, bottom: 4, left: 30, right: 4 },
@@ -76,7 +74,7 @@ var __ = {
       splitStrokeColors = ['red','green','black'],
       strokeFunction = function(index) { return splitStrokeColors[index];},
       data_array = [],
-      yaxis = d3.svg.axis().orient("right").ticks(5).tickSize(-1*plotWidth(),4,4),
+      yaxis = d3.svg.axis().orient("right").ticks(5).tickSize(-1*plotWidth() + 10,4,4),
       xaxis = d3.svg.axis().orient("bottom").ticks(5),
       bottom_surface, split_surface, data_surface, partition_surface; // groups for axes, brushes
 
@@ -89,7 +87,6 @@ var __ = {
     .on("data", function(d) { parseData(); console.log('new data');})
     .on("splits", function(d) { parseSplits(); console.log('new splits');});
    
-
  var splitiscope = function(selection) {
     selection = splitiscope.selection = d3.select(selection);
 
@@ -98,7 +95,7 @@ var __ = {
 
     setAxes();
 
-            //draw chart
+    //draw chart
     splitiscope.svg = selection
                     .append('svg')
                     .attr('class','splitiscope')
@@ -118,19 +115,22 @@ var __ = {
                         .attr('transform','translate('+__.margin.left+','+ __.margin.top+')');
                        
     bottom_surface = plot_offset.append('g')
-                  .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
+                        .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
 
-    partition_surface = bottom_surface.append('g');
-                        
+    partition_surface = bottom_surface.append('g')
+                         .on('mouseover', function(split_val) {
+                              if (selected['y'] === null) clearSplitSelection('y');
+                              if (selected['x'] === null) clearSplitSelection('x');
+                            });  ;            ;
 
     var top_surface = plot_offset.append('g')
-                  .attr('clip-path','url(#plot_clip)');                 
+                  .attr('clip-path','url(#plot_clip)');
 
     split_surface = top_surface.append('g')
-    .attr('transform','translate(' + padding.left + ',' + padding.top + ')');                    
+                    .attr('transform','translate(' + padding.left + ',' + padding.top + ')');                    
 
     data_surface = top_surface.append('g')
-    .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
+                    .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
 
             return splitiscope;
   };
@@ -143,6 +143,9 @@ var __ = {
 
   // create getter/setters
   getset(splitiscope, __, events);
+
+  // expose events
+  d3.rebind(splitiscope, events, "on");
 
         // getter/setter with event firing
   function getset(obj,state,events)  {
@@ -174,7 +177,6 @@ splitiscope.render = function() {
     .attr('transform','translate('+ (plotWidth()) +',0)')
     .attr('class','y axis')
     .call(yaxis);
-
 
     bottom_surface.append('text')
     .attr('transform','translate('+ (plotWidth() + 25) +',' + plotHeight()/2 + ')rotate(-90)')
@@ -208,8 +210,6 @@ splitiscope.render = function() {
                               return _.isUndefined(point.splits_on_x) ? 1.0 : caseSplitsOpacityscale(point.splits_on_x);
                           });
 
-
-
   }
 
   splitiscope.resize = function() {
@@ -238,19 +238,7 @@ function drawSplits() {
 
 function drawXSplits() {
 
-    var xsplits = split_surface.append('g')  
-                        .on('mouseout', function(split_val){
-                              if (selected['y'] === null) clearSplitSelection('y');
-                              if (selected['x'] === null) clearSplitSelection('x');
-                            });  
-
-                        xsplits.append('rect')
-                          .attr('y', -1 * padding.top - 10)
-                          .attr('height',padding.top + 20)
-                          .attr('x',split_data.x.binScale(0)-20)
-                          .attr('width',  split_data.x.binScale(split_data.x.data_array.length-1) - split_data.x.binScale(0) + 40)
-                          .attr('stroke','transparent')
-                          .attr('fill','transparent');             
+    var xsplits = split_surface.append('g');
 
     var splits = xsplits                    
                     .selectAll('.x .splits')
@@ -302,19 +290,7 @@ function drawXSplits() {
 
 function drawYSplits() {
 
-     var ysplits = split_surface.append('g')
-                          .on('mouseout', function(split_val){
-                              if (selected['y'] === null) clearSplitSelection('y');
-                              if (selected['x'] === null) clearSplitSelection('x');
-                            });  
-
-                          ysplits.append('rect')
-                          .attr('x', -1 * padding.left - 10)
-                          .attr('width',padding.left + 20)
-                          .attr('y',split_data.y.binScale(split_data.y.data_array.length-1)-20)
-                          .attr('height', split_data.y.binScale(0) - split_data.y.binScale(split_data.y.data_array.length-1) + 40)
-                          .attr('stroke','transparent')
-                          .attr('fill','transparent');
+     var ysplits = split_surface.append('g');
 
      var splits = ysplits
                     .selectAll('.y .splits')
@@ -410,7 +386,21 @@ function drawYSplits() {
                       .attr('height',function(val) {return val[3];})
                       .style('fill',function(d,i) { return __.partitionColors[i]})
                       .style('fill-opacity',0.3)
-                      .style('stroke','none');              
+                      .style('stroke','none')
+                      .on('click',function(dims){
+                        var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
+                        var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
+                        var data_indices  = _.map(__.data.x, function(valx,index){
+                          var valy = __.data.y[index];
+                            return valx >= x.low && valx <= x.high && valy >= y.low && valy <= y.high ? index : null;
+                        });
+                        data_indices = _.compact(data_indices);
+                        var data = {};
+                        _.each(_.keys(__.data), function(data_key) {
+                          data[data_key] = d3.permute(__.data[data_key],data_indices);
+                        });
+                        events.partition(data);
+                      });              
 
                       partitions.transition()
                       .duration(100)
@@ -447,14 +437,7 @@ function drawYSplits() {
     split_data[axis].span = split_data[axis].binScale(index);
 
     drawPartitionSpans();
-                      // d3.selectAll('.data_point')
-                      //   .filter(function(point) { return scales[axis](point[axis]) < split_data[axis].binScale(index); })
-                      //   .attr(split_data[axis].vis.attr,split_data[axis].vis.fn(0));
-
-                      // d3.selectAll('.data_point')
-                      //   .filter(function(point) { return scales[axis](point[axis]) >= split_data[axis].binScale(index); })
-                      //   .attr(split_data[axis].vis.attr,split_data[axis].vis.fn(1));
-
+ 
   }
 
   function clearSplitSelection(axis){
@@ -466,7 +449,6 @@ function drawYSplits() {
       drawPartitionSpans();
 
   }
-
 
   function parseData() {
     if ((__.data.x).length < 1) {
@@ -519,15 +501,36 @@ function drawYSplits() {
     _.each(['x','y'], function (axis){
 
       if (__.splits[axis] !== undefined) {
-        s = split_data[axis].data_array = __.splits[axis].bins;
+
+       s = split_data[axis].data_array = __.splits[axis].bins;
+        
         if(s.length < 1 || s[0] === undefined || s[0].length < 1) {
           console.error('invalid split bins in axis: ' + axis);
           return;
         }
 
-        split_bin_number = s.length;
+        split_bin_number = split_data[axis].data_array.length;
         split_bin_start = __.splits[axis].low+(.5*__.splits[axis].binsize);
         split_bin_end = split_bin_start + ((split_bin_number-1)*__.splits[axis].binsize);
+
+        var bin_positions = _.map(s, function(d,i) { return split_bin_start + (__.splits[axis].binsize * i); });
+        var range = scales[axis].domain(), min = range[0], max = range[1];
+        s= [];
+        var idx = 0, bin_p = [];
+
+         _.each(bin_positions, function(val, index) { 
+                        if (val >= min && val <= max) {
+                          bin_p[idx] = val;
+                          s[idx] = split_data[axis].data_array[index];
+                          idx++;
+                        } 
+        });
+
+        split_bin_number = bin_p.length;
+        split_bin_start = bin_p[0];
+        split_bin_end = bin_p[split_bin_number-1];
+
+        split_data[axis].data_array = split_bin_number > 0 ? s : undefined;
 
         split_data[axis].vis = {
                                 attr : axis === 'x' ? 'd' : 'stroke',
@@ -535,7 +538,7 @@ function drawYSplits() {
                                 default: axis === 'x' ? symbolFunction(0)() : 'transparent',
                               };
 
-        setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end);
+        if (!_.isUndefined(split_data[axis].data_array)) setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end);
       }
 
   });
@@ -553,7 +556,7 @@ function drawYSplits() {
 
   function setAxes() {
     
-    yaxis.scale(scales['y']).tickSize(-1*plotWidth()).ticks(5);
+    yaxis.scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
     xaxis.scale(scales['x']).tickSize(2).ticks(5);
 
     return splitiscope;
