@@ -283,10 +283,7 @@ function drawXSplits() {
                 var position = d3.mouse(this)[0];
                 if (selected['x'] === null) selectSplitValue(position, 'x');
               })
-              .on('mousemove',function(){
-                var position = d3.mouse(this)[0];
-                if (selected['x'] === null) selectSplitValue(position, 'x');
-              })
+              .on('mousemove',mousemove_fn('x'))
               .on('mouseout', function() {
                 if (selected['x'] === null) clearSplitSelection('x');
               })
@@ -377,11 +374,8 @@ function drawYSplits() {
                 var position = d3.mouse(this)[1];
                 if (selected['y'] === null) selectSplitValue(position, 'y');
               })
-              .on('mousemove',function(){
-                var position = d3.mouse(this)[1];
-                if (selected['y'] === null) selectSplitValue(position, 'y');
-              })
-               .on('mouseout', function() {
+              .on('mousemove',mousemove_fn('y'))
+              .on('mouseout', function() {
                 if (selected['y'] === null) clearSplitSelection('y');
               })
               .on('click', function() {
@@ -513,23 +507,32 @@ function drawYSplits() {
                         _.each(_.keys(__.data), function(data_key) {
                           data[data_key] = d3.permute(__.data[data_key],data_indices);
                         });
-                        events.partition(data);
+                        var split_obj = {x: null, y: null};
+                        split_obj.x = _.clone(x);
+                        split_obj.y = _.clone(y);
+                        events.partition(data, split_obj);
                       });              
 
-                      partitions.transition()
-                      .duration(100)
-                       .attr('x',function(val) {return val[0];})
+                  partitions
+                      .attr('x',function(val) {return val[0];})
                       .attr('y',function(val) {return val[1];})
                       .attr('width', function(val) {return val[2];})
                       .attr('height',function(val) {return val[3];});
 
-                      partitions.exit()
+                  partitions.exit()
                       .transition()
                       .duration(100)
                       .attr('fill-opacity',0)
                       .remove();
 
   }
+
+function mousemove_fn(axis) {
+  return function(){ 
+                var position = d3.mouse(this)[axis === 'x' ? 0 : 1];
+                if (selected[axis] === null) selectSplitValue(position, axis);            
+  };
+}
 
   function mouseover_fn(el,index, axis) {
                if (selected[axis] === index) {
