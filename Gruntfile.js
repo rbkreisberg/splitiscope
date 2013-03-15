@@ -36,11 +36,16 @@ module.exports = function (grunt) {
                 files: ['<%= yeoman.app %>/styles/{,*/}*.{scss,sass}'],
                 tasks: ['compass']
             },
+            handlebars: {
+                files: ['<%= yeoman.app %>/scripts/templates/{,*/}*.{hbs}'],
+                tasks: ['handlebars']
+            },
             livereload: {
                 files: [
                     '<%= yeoman.app %>/*.html',
                     '{.tmp,<%= yeoman.app %>}/styles/{,*/}*.css',
                     '{.tmp,<%= yeoman.app %>}/scripts/{,*/}*.js',
+                    '{.tmp,<%= yeoman.app %>}/scripts/templates/**/{,*/}*.js',
                     '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,webp}'
                 ],
                 tasks: ['livereload']
@@ -140,12 +145,27 @@ module.exports = function (grunt) {
                 javascriptsDir: '<%= yeoman.app %>/scripts',
                 fontsDir: '<%= yeoman.app %>/styles/fonts',
                 importPath: 'app/components',
-                relativeAssets: true
+                relativeAssets: false,
+                raw: 'http_images_path = \'../images\'\nhttp_generated_images_path = \'../images\'\n'
             },
             dist: {},
             server: {
                 options: {
                     debugInfo: true
+                }
+            }
+        },
+        handlebars: {
+            compile: {
+                files: '<%= yeoman.app %>/scripts/templates/{,*/}*.hbs'
+             },
+            options: {
+                namespace: 'splitiscope.templates',
+                processName: function(filename) {
+                // funky name processing here
+                    return filename
+                            .replace(/^app\/templates\//, '')
+                            .replace(/\.hbs$/, '');
                 }
             }
         },
@@ -159,7 +179,7 @@ module.exports = function (grunt) {
                 // Options: https://github.com/jrburke/r.js/blob/master/build/example.build.js
                 options: {
                     // `name` and `out` is set by grunt-usemin
-                    baseUrl: 'app/scripts',
+                    baseUrl: '<%= yeoman.app %>/scripts',
                     optimize: 'none',
                     // TODO: Figure out how to make sourcemaps work with grunt-usemin
                     // https://github.com/yeoman/grunt-usemin/issues/30
@@ -199,6 +219,9 @@ module.exports = function (grunt) {
         cssmin: {
             dist: {
                 files: {
+                    '.tmp/styles/jq-ui-b.css' : [
+                        'app/components/jquery-ui-bootstrap/{,*/}*.css'
+                    ],
                     '<%= yeoman.dist %>/styles/main.css': [
                         '.tmp/styles/{,*/}*.css',
                         '<%= yeoman.app %>/styles/{,*/}*.css'
@@ -241,6 +264,12 @@ module.exports = function (grunt) {
                 }]
             }
         },
+        lint: {
+            files: [
+                    'Gruntfile.js',
+                    'app/scripts/**/*.js'
+            ]
+        },
         bower: {
             all: {
                 rjsConfig: '<%= yeoman.app %>/scripts/main.js'
@@ -255,9 +284,10 @@ module.exports = function (grunt) {
             return grunt.task.run(['build', 'open', 'connect:dist:keepalive']);
         }
 
-        grunt.task.run([
+    grunt.task.run([
             'clean:server',
             'coffee:dist',
+            'handlebars',
             'compass:server',
             'livereload-start',
             'connect:livereload',
@@ -278,6 +308,7 @@ module.exports = function (grunt) {
         'clean:dist',
         'coffee',
         'compass:dist',
+        'handlebars',
         'useminPrepare',
         'requirejs',
         'imagemin',
