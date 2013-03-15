@@ -1,5 +1,11 @@
 /*global define */
-define(['queue', 'splitiscope'], function (queue, split_vis) {
+define([
+    'queue', 
+    'splitiscope',
+    'handlebars',
+    'hbs!templates/splititem'
+
+], function (queue, split_vis, handlebars, splitItemTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -65,6 +71,7 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
                     //     }
 
                     // });
+var format = d3.format('.3f');
                     var plot = function(data) {
                             var splitiscope = split_vis({
                                 radius: 12,
@@ -76,8 +83,11 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
                             splitiscope('#plot')
                             .data(data)
                             .splits({x:test_split_x, y: test_split_y})
-                            .on('partition',function(data) {
+                            .on('partition',function(data,split_obj) {
                                             plot(data);
+                                            var x = split_obj.x;
+                                            var xtext = format(x.low) + ' <= x <= ' + format(x.high);
+                                            $('ul.split_list').html(splitItemTemplate({splitItem:  xtext}));
                                 })
                             .render();
                         };
