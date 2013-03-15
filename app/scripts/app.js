@@ -69,7 +69,7 @@ define(['queue', 'splitiscope'], function (queue, split_vis) {
                             var splitiscope = split_vis({
                                 radius: 12,
                                 margin : {
-                                            top: 10, left: 10, bottom: 30, right: 30
+                                            top: 10, left: 10, bottom: 30, right: 40
                                 }
                             });
                             $('#plot').empty();
