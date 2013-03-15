@@ -117,12 +117,8 @@ var __ = {
     bottom_surface = plot_offset.append('g')
                         .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
 
-    partition_surface = bottom_surface.append('g')
-                         .on('mouseover', function(split_val) {
-                              if (selected['y'] === null) clearSplitSelection('y');
-                              if (selected['x'] === null) clearSplitSelection('x');
-                            });  ;            ;
-
+    partition_surface = bottom_surface.append('g');
+                         
     var top_surface = plot_offset.append('g')
                   .attr('clip-path','url(#plot_clip)');
 
@@ -169,8 +165,40 @@ splitiscope.render = function() {
 
   if (_.isObject(split_data)) drawSplits();
 
+  drawSplitLabel();
+
     return this;
 };
+
+function drawSplitLabel() {
+    var split_labels = bottom_surface.append('g')
+                          .attr('class','split_labels');
+    split_labels.append('text')
+                .attr('class','x')
+                .attr('transform','translate(0,'+plotHeight()+')')
+                .text('');
+
+    split_labels.append('text')
+                .attr('class','y')
+                .attr('transform','translate(0,0)')
+                .text('');                
+}
+
+function updateSplitTextLabel(position,axis) {
+  var format = d3.format('.3f');
+    if (position === null) {
+      bottom_surface.select('.split_labels .' + axis)
+                      .text('');
+      return;
+    }
+    var transform = {
+                  x : axis === 'x' ? position : plotWidth()+2,
+                  y : axis === 'y' ? position : plotHeight()+2
+    };
+    bottom_surface.select('.split_labels .' + axis)
+                    .text(format(scales[axis].invert(position)))
+                    .attr('transform','translate(' + transform.x + ',' + transform.y + ')');
+}
 
   function drawAxes() {
     bottom_surface.append('g')
@@ -239,102 +267,188 @@ function drawSplits() {
 function drawXSplits() {
 
     var xsplits = split_surface.append('g');
+    
+    var xExtent = scales.x.range();
+     
+    xsplits.append('rect')             
+              .attr('x',xExtent[0])
+              .attr('width', xExtent[1] - xExtent[0])
+              .attr('y', -1 * padding.top)
+              .attr('height', padding.top)
+              .style('fill','#eee')
+              .style('fill-opacity',0.3)
+              .style('stroke','#888')
+              .style('stroke-width',2.0)
+              .on('mouseover',function(){
+                var position = d3.mouse(this)[0];
+                if (selected['x'] === null) selectSplitValue(position, 'x');
+              })
+              .on('mousemove',function(){
+                var position = d3.mouse(this)[0];
+                if (selected['x'] === null) selectSplitValue(position, 'x');
+              })
+              .on('mouseout', function() {
+                if (selected['x'] === null) clearSplitSelection('x');
+              })
+              .on('click', function() {
+                  var position = d3.mouse(this)[0];
+                  selectSplitValue(position,'x');
+                  if (selected['x'] !== null) {
+                    xsplits.selectAll('.x.split_pointer').remove();
+                    selected['x'] = null;
+                  }
+                  else { 
+                    selected['x'] = position;
+                    xsplits.append('path')
+                        .attr('class','x split_pointer')
+                        .attr('transform','translate('+position+',0)')
+                        .attr('d',function(d,i) {
+                          return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
+                          })
+                        .style('stroke', '#cc6432')
+                        .style('stroke-width',4.0)
+                        .style('fill','#cc6432');
+                      }
+                });
 
-    var splits = xsplits                    
-                    .selectAll('.x .splits')
-                    .data(split_data.x.data_array)                   
-                  .enter()
-                  .append('g')
-                  .attr('class','x splits')
-                  .on('click', function(split_val,i) {
-                          mouseover_fn(this, i, 'x');
-                       })
-                   .on('mouseover',function(split_val,i){
-                      if (selected['x'] === null) makeSplitSelection(this, i, 'x');
-                    });
+    // var splits = xsplits                    
+    //                 .selectAll('.x .splits')
+    //                 .data(split_data.x.data_array)                   
+    //               .enter()
+    //               .append('g')
+    //               .attr('class','x splits')
+    //               .on('click', function(split_val,i) {
+    //                       mouseover_fn(this, i, 'x');
+    //                    })
+    //                .on('mouseover',function(split_val,i){
+    //                   if (selected['x'] === null) makeSplitSelection(this, i, 'x');
+    //                 });
                    
-                  splits.append('rect')
-                    .attr('class','split_bubble')
-                    .attr('x',function(d,i) { return split_data.x.binScale(i)-20;})
-                    .attr('width', 40)
-                    .attr('y',-1 * padding.top)
-                    .attr('height',padding.top +10)
-                    .style('stroke',split_data.x.colorScale)
-                    .style('stroke-opacity','1')
-                    .style('stroke-width',0)
-                    .style('fill','transparent')
-                    .style('fill-opacity','1');
+    //               splits.append('rect')
+    //                 .attr('class','split_bubble')
+    //                 .attr('x',function(d,i) { return split_data.x.binScale(i)-20;})
+    //                 .attr('width', 40)
+    //                 .attr('y',-1 * padding.top)
+    //                 .attr('height',padding.top +10)
+    //                 .style('stroke',split_data.x.colorScale)
+    //                 .style('stroke-opacity','1')
+    //                 .style('stroke-width',0)
+    //                 .style('fill','transparent')
+    //                 .style('fill-opacity','1');
 
-          var split_line = splits.append('g')
-                    .attr('class','split_line')
-                    .attr('transform',function(d,i) { return 'translate('+split_data.x.binScale(i)+','+0+')';});
+    //       var split_line = splits.append('g')
+    //                 .attr('class','split_line')
+    //                 .attr('transform',function(d,i) { return 'translate('+split_data.x.binScale(i)+','+0+')';});
                     
-              split_line 
-                    .append('path')
-                    .attr('d',function(d,i) {
-                      return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
-                      })
-                    .style('stroke',split_data.x.colorScale)
-                    .style('stroke-width',4.0)
-                    .style('fill',split_data.x.colorScale);
+    //           split_line 
+    //                 .append('path')
+    //                 .attr('d',function(d,i) {
+    //                   return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
+    //                   })
+    //                 .style('stroke',split_data.x.colorScale)
+    //                 .style('stroke-width',4.0)
+    //                 .style('fill',split_data.x.colorScale);
 
-              split_line
-                      .append("path")
-                      .style('stroke',split_data.x.colorScale)
-                      .style('stroke-width',4.0)
-                      .style('fill',split_data.x.colorScale)
-                      .attr("d", "M5,0L-5,0L0,5z");
+    //           split_line
+    //                   .append("path")
+    //                   .style('stroke',split_data.x.colorScale)
+    //                   .style('stroke-width',4.0)
+    //                   .style('fill',split_data.x.colorScale)
+    //                   .attr("d", "M5,0L-5,0L0,5z");
 
   }
 
-
 function drawYSplits() {
 
-     var ysplits = split_surface.append('g');
+    var ysplits = split_surface.append('g');
 
-     var splits = ysplits
-                    .selectAll('.y .splits')
-                    .data(split_data.y.data_array)
-                  .enter()
-                  .append('g')
-                   .attr('class','y splits')
-                   .on('click', function(split_val,i) {
-                          mouseover_fn(this,i,'y')
-                    })
-                   .on('mouseover',function(split_val,i){
-                        if (selected['y'] === null) makeSplitSelection(this,i,'y');
-                    });
+    var yExtent = scales.y.range();
+     
+     ysplits.append('rect')
+              .attr('x',-1 * padding.left)
+              .attr('width', padding.left)
+              .attr('y',yExtent[1])
+              .attr('height',yExtent[0]-yExtent[1])
+              .style('fill','#eee')
+              .style('fill-opacity',0.3)
+              .style('stroke','#888')
+              .style('stroke-width',2.0)
+              .on('mouseover',function(){
+                var position = d3.mouse(this)[1];
+                if (selected['y'] === null) selectSplitValue(position, 'y');
+              })
+              .on('mousemove',function(){
+                var position = d3.mouse(this)[1];
+                if (selected['y'] === null) selectSplitValue(position, 'y');
+              })
+               .on('mouseout', function() {
+                if (selected['y'] === null) clearSplitSelection('y');
+              })
+              .on('click', function() {
+                  var position = d3.mouse(this)[1];
+                  selectSplitValue(position,'y');
+                  if (selected['y'] !== null) {
+                    ysplits.selectAll('.y.split_pointer').remove();
+                    selected['y'] = null;
+                  }
+                  else { 
+                    selected['y'] = position;
+                    ysplits.append('path')
+                        .attr('class','y split_pointer')
+                        .attr('transform','translate(0,'+position+')')
+                        .attr('d',function(d,i) {
+                          return "M" + "-" + padding.left + ",0h"+ padding.left;
+                          })
+                        .style('stroke', '#cc6432')
+                        .style('stroke-width',4.0)
+                        .style('fill','#cc6432');
+                      }
+                });
+                                 
 
-                  splits.append('rect')
-                    .attr('class','split_bubble')
-                    .attr('y',function(d,i) { return split_data.y.binScale(i)-20;})
-                    .attr('height', 40)
-                    .attr('x',-1 * padding.left)
-                    .attr('width',padding.left + 10)
-                    .style('stroke',split_data.y.colorScale)
-                    .style('stroke-opacity','1')
-                    .style('stroke-width',0)
-                    .style('fill','transparent')
-                    .style('fill-opacity','1');
+     // var splits = ysplits
+     //                .selectAll('.y .splits')
+     //                .data(split_data.y.data_array)
+     //              .enter()
+     //              .append('g')
+     //               .attr('class','y splits')
+     //               .on('click', function(split_val,i) {
+     //                      mouseover_fn(this,i,'y')
+     //                })
+     //               .on('mouseover',function(split_val,i){
+     //                    if (selected['y'] === null) makeSplitSelection(this,i,'y');
+     //                });
 
-          var split_line = splits.append('g')
-                    .attr('class','split_line')
-                    .attr('transform',function(d,i) { return 'translate('+0+',' + split_data.y.binScale(i) +')';});
+          //         splits.append('rect')
+          //           .attr('class','split_bubble')
+          //           .attr('y',function(d,i) { return split_data.y.binScale(i)-20;})
+          //           .attr('height', 40)
+          //           .attr('x',-1 * padding.left)
+          //           .attr('width',padding.left + 10)
+          //           .style('stroke',split_data.y.colorScale)
+          //           .style('stroke-opacity','1')
+          //           .style('stroke-width',0)
+          //           .style('fill','transparent')
+          //           .style('fill-opacity','1');
+
+          // var split_line = splits.append('g')
+          //           .attr('class','split_line')
+          //           .attr('transform',function(d,i) { return 'translate('+0+',' + split_data.y.binScale(i) +')';});
                     
-                  split_line 
-                    .append('path')
-                    .attr('d',function(d,i) {
-                      return "M" + "-" + padding.left + ",0h"+ padding.left;
-                      })
-                    .style('stroke',split_data.y.colorScale)
-                    .style('stroke-width',4.0)
-                    .style('fill',split_data.y.colorScale);
+          //         split_line 
+          //           .append('path')
+          //           .attr('d',function(d,i) {
+          //             return "M" + "-" + padding.left + ",0h"+ padding.left;
+          //             })
+          //           .style('stroke',split_data.y.colorScale)
+          //           .style('stroke-width',4.0)
+          //           .style('fill',split_data.y.colorScale);
 
-                  split_line.append("path")
-                      .style('stroke',split_data.y.colorScale)
-                      .style('stroke-width',4.0)
-                      .style('fill',split_data.y.colorScale)
-                      .attr("d", "M0,5L5,0L0,-5z");
+          //         split_line.append("path")
+          //             .style('stroke',split_data.y.colorScale)
+          //             .style('stroke-width',4.0)
+          //             .style('fill',split_data.y.colorScale)
+          //             .attr("d", "M0,5L5,0L0,-5z");
 
   }
 
@@ -427,7 +541,7 @@ function drawYSplits() {
                           makeSplitSelection(el,selected[axis],axis);
                           return;
   }
-
+ 
   function makeSplitSelection(el, index, axis){
     var selector = '.' + axis + ' .split_line,.' + axis + ' .split_bubble';
     var split = d3.select(el).selectAll(selector);
@@ -440,6 +554,13 @@ function drawYSplits() {
  
   }
 
+  function selectSplitValue(position, axis) {
+    var value = scales[axis].invert(position)
+    split_data[axis].span = position;
+    drawPartitionSpans();
+    updateSplitTextLabel(position, axis);
+  }
+
   function clearSplitSelection(axis){
        var selector = '.' + axis + ' .split_line,.' + axis + ' .split_bubble';
                       d3.selectAll(selector).style('stroke-opacity',1).style('fill-opacity',1);
@@ -447,6 +568,7 @@ function drawYSplits() {
 
       split_data[axis].span = null;
       drawPartitionSpans();
+      updateSplitTextLabel(null, axis);
 
   }
 
