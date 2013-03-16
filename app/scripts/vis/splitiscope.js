@@ -254,14 +254,9 @@ function updateSplitTextLabel(position,axis) {
   };
 
 function drawSplits() {
-
-  if (!_.isUndefined(split_data.x.data_array)) {
+  
     drawXSplits();
-  }
-
-  if (!_.isUndefined(split_data.y.data_array)) {
     drawYSplits();
-  }
 }
 
 function drawXSplits() {
@@ -307,7 +302,7 @@ function drawXSplits() {
                         .style('fill','#cc6432');
                       }
                 });
-
+    // if (!_.isUndefined(split_data.x.data_array)) {
     // var splits = xsplits                    
     //                 .selectAll('.x .splits')
     //                 .data(split_data.x.data_array)                   
@@ -352,7 +347,7 @@ function drawXSplits() {
     //                   .style('stroke-width',4.0)
     //                   .style('fill',split_data.x.colorScale)
     //                   .attr("d", "M5,0L-5,0L0,5z");
-
+          // }
   }
 
 function drawYSplits() {
@@ -399,6 +394,7 @@ function drawYSplits() {
                       }
                 });
                                  
+    // if (!_.isUndefined(split_data.y.data_array)) {
 
      // var splits = ysplits
      //                .selectAll('.y .splits')
@@ -443,7 +439,7 @@ function drawYSplits() {
           //             .style('stroke-width',4.0)
           //             .style('fill',split_data.y.colorScale)
           //             .attr("d", "M0,5L5,0L0,-5z");
-
+          // }
   }
 
   function drawPartitionSpans() {
