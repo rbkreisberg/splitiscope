@@ -1,11 +1,37 @@
 
-$iconSpritePath: "../images/glyphicons-halflings.png"!default;
-$iconWhiteSpritePath: "../images/glyphicons-halflings-white.png"!default;
-@import 'sass-bootstrap/lib/bootstrap';
+$fontAwesomePath : '../components/font-awesome/font' !default;
+@import 'bootstrap';
+
+/* states and images */
+.ui-icon { background-image: url("../images/ui-icons_333333_256x240.png"); }
+.ui-widget-content .ui-icon {background-image: url("../images/ui-icons_333333_256x240.png"); }
+.ui-widget-header .ui-icon {background-image: url("../images/ui-icons_333333_256x240.png"); }
+.ui-state-default .ui-icon { background-image: url("../images/ui-icons_888888_256x240.png"); }
+.ui-state-hover .ui-icon, .ui-state-focus .ui-icon {background-image: url("../images/ui-icons_454545_256x240.png"); }
+.ui-state-active .ui-icon {background-image: url("../images/ui-icons_454545_256x240.png"); }
+.ui-state-highlight .ui-icon {background-image: url("../images/ui-icons_888888_256x240.png"); }
+.ui-state-error .ui-icon, .ui-state-error-text .ui-icon {background-image: url("../images/ui-icons_B94A48_256x240.png"); }
+
+
+
+.split_item {
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.split_item i {
+    vertical-align: middle;
+}
+
 
 .hero-unit {
     margin: 50px auto 0 auto;
     width: 300px;
+}
+
+.split_item i[class^="icon-"], .split_item i[class*=" icon-"] {
+    width: auto;
+    vertical-align: baseline;
 }
 
 body {

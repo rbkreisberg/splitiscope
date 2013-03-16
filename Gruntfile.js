@@ -37,8 +37,12 @@ module.exports = function (grunt) {
                 tasks: ['compass']
             },
             handlebars: {
-                files: ['<%= yeoman.app %>/scripts/templates/{,*/}*.{hbs}'],
+                files: ['<%= yeoman.app %>/scripts/templates/{,*/}*.hbs'],
                 tasks: ['handlebars']
+            },
+            concat : {
+                files: ['.tmp/styles/{,*/}*.css'],
+                tasks: ['concat']
             },
             livereload: {
                 files: [
@@ -46,7 +50,8 @@ module.exports = function (grunt) {
                     '{.tmp,<%= yeoman.app %>}/styles/{,*/}*.css',
                     '{.tmp,<%= yeoman.app %>}/scripts/{,*/}*.js',
                     '{.tmp,<%= yeoman.app %>}/scripts/templates/**/{,*/}*.js',
-                    '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,webp}'
+                    '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,webp}',
+                    '<%= yeoman.app %>/scripts/templates/{,*/}*.hbs'   
                 ],
                 tasks: ['livereload']
             }
@@ -171,9 +176,12 @@ module.exports = function (grunt) {
         },
         // not used since Uglify task does concat,
         // but still available if needed
-        /*concat: {
-            dist: {}
-        },*/
+        concat: {
+            dist: {
+                src : ['.tmp/styles/{,*}*.css','<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css'],
+                dest : '.tmp/styles/main.css'
+            }
+        },
         requirejs: {
             dist: {
                 // Options: https://github.com/jrburke/r.js/blob/master/build/example.build.js
@@ -218,14 +226,11 @@ module.exports = function (grunt) {
         },
         cssmin: {
             dist: {
+                report: 'min',
                 files: {
-                    '.tmp/styles/jq-ui-b.css' : [
-                        'app/components/jquery-ui-bootstrap/{,*/}*.css'
-                    ],
-                    '<%= yeoman.dist %>/styles/main.css': [
-                        '.tmp/styles/{,*/}*.css',
-                        '<%= yeoman.app %>/styles/{,*/}*.css'
-                    ]
+                    '<%= yeoman.dist %>/styles/main.css' : [
+                    '.tmp/styles/{,*/}*.css'
+                    ]                 
                 }
             }
         },
@@ -289,6 +294,7 @@ module.exports = function (grunt) {
             'coffee:dist',
             'handlebars',
             'compass:server',
+            'concat',
             'livereload-start',
             'connect:livereload',
             'open',
