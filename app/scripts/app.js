@@ -2,10 +2,8 @@
 define([
     'queue', 
     'splitiscope',
-    'handlebars',
     'hbs!templates/splititem'
-
-], function (queue, split_vis, handlebars, splitItemTemplate) {
+], function (queue, split_vis, splitItemTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -17,7 +15,11 @@ define([
         splits_range = { min : 20, max : 200},
         label_list = ['high', 'low'],
         test_data = {},
-        num = 500;
+        num = 500,
+        labels = {
+                    x : 'Feature X',
+                    y : 'Feature Y'
+                };
 
     test_data.x = _.map(_.range(num),function(value) {
                 return (Math.random()*(x_range.max - x_range.min) + x_range.min);
@@ -59,6 +61,12 @@ define([
 
     var Application = {
         initialize: function(){
+            //spin up jquery hooks
+             function jquery_hooks() {
+                $( ".split_list" ).sortable();
+                $( ".split_list" ).disableSelection();
+              }
+            jquery_hooks();
             // queue()
             //     //.defer(d3.json, 'http://')
             //     .defer(function() { return true;})
@@ -85,9 +93,18 @@ var format = d3.format('.3f');
                             .splits({x:test_split_x, y: test_split_y})
                             .on('partition',function(data,split_obj) {
                                             plot(data);
-                                            var x = split_obj.x;
-                                            var xtext = format(x.low) + ' <= x <= ' + format(x.high);
-                                            $('ul.split_list').html(splitItemTemplate({splitItem:  xtext}));
+                                            var x = {
+                                                label: labels.x, 
+                                                low: format(split_obj.x.low),
+                                                high: format(split_obj.x.high)
+                                            },
+                                                y = {
+                                                label: labels.y, 
+                                                low: format(split_obj.y.low),
+                                                high: format(split_obj.y.high)
+                                            };
+                                         
+                                            $('ul.split_list').append(splitItemTemplate({splitItem:  {x: x, y:y}}));
                                 })
                             .render();
                         };

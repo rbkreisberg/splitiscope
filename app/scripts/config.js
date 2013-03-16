@@ -7,7 +7,7 @@ require.config({
 
   "paths": {
       "jQuery": "../components/jquery/jquery",
-      "jQuery-ui": "../components/jquery-ui/ui/jquery-ui.custom.min.js",
+      "jQuery-ui": "../components/jquery-ui/ui/jquery-ui.custom",
       "bootstrap": "vendor/bootstrap/bootstrap",
       "backbone": "../components/backbone/backbone",
       "d3": "../components/d3/d3",
