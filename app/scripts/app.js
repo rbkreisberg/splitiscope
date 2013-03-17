@@ -61,12 +61,47 @@ define([
 
     var Application = {
         initialize: function(){
+            var split_list = '#split_list',
+                split_item = 'li.split_item';
+
             //spin up jquery hooks
              function jquery_hooks() {
-                $( ".split_list" ).sortable();
-                $( ".split_list" ).disableSelection();
+                
+                var trash = '#trash';
+
+                $( split_list ).sortable({
+                    placeholder: 'split_placeholder',
+                    forcePlaceholderSize: true,
+                    cursor: 'move'
+                    }).disableSelection();
+
+                // let the trash be droppable, accepting the split items
+                $(trash).droppable({
+                  accept: split_list + ' ' + split_item,
+                  activeClass: "ui-state-highlight",
+                  hoverClass: " ui-state-default",
+                  drop: function( event, ui ) {
+                    console.log('drop');
+                    ui.draggable.fadeOut(function() {
+                        ui.draggable.remove();
+                    });
+                    }
+                }).disableSelection();
+
               }
             jquery_hooks();
+
+            function make_draggable($el) {
+                // let the split items be draggable
+                $el.draggable({
+                  revert: "invalid", // when not dropped, the item will revert back to its initial position
+                  containment: "document",
+                  cursor: "move"
+                }).disableSelection();
+                
+                return $el;
+            }
+
             // queue()
             //     //.defer(d3.json, 'http://')
             //     .defer(function() { return true;})
@@ -104,12 +139,12 @@ var format = d3.format('.3f');
                                                 high: format(split_obj.y.high)
                                             };
                                          
-                                            $('ul.split_list').append(splitItemTemplate({splitItem:  {x: x, y:y}}));
+                                            $( split_list ).prepend(splitItemTemplate({splitItem:  {x: x, y:y}}));
+                                            // make_draggable($( split_item ));
                                 })
-                            .render();
+                                .render();
                         };
                 plot(test_data);
-                // });
         }
     };
     return Application;

@@ -14,36 +14,10 @@
         <!-- build:js scripts/vendor/modernizr.js -->
         <script src="components/modernizr/modernizr.js"></script>
         <!-- endbuild -->
-
-        <style>
-        #plot {
-            height: 600px; 
-            width: 800px;
-        }
-
-        .data_point {
-            stroke-width: 2px;
-        }
-      
-        .axis path, .axis line {
-            fill: none;
-            stroke: #000;
-            stroke-width: 1.0px;
-            shape-rendering: crispEdges;
-        }
-        
-        .y.axis path,  .y.axis line{
-            stroke:#aaa;
-        }
-
-        .x.axis path, .x.axis line {
-            stroke:none;
-            fill:none;
-        }
-        </style>
+  
     </head>
     <body>    
-                <div class="navbar navbar-fixed-top">
+        <div class="navbar navbar-fixed-top">
             <div class="navbar-inner">
                 <div class="container">
                     <ul class="nav">
@@ -80,16 +54,17 @@
             <div class="row">
                 <div class="span3" style="padding-top:100px;">
                     <p>
-                        <a class="btn btn-large btn-danger" href="#"><i class="icon-trash icon-large pull-left"></i> Remove</a>
+                        <a id="trash" class="btn btn-large btn-danger">
+                            <i class="icon-trash icon-large pull-left"></i>
+                             Remove
+                         </a>
                     </p>
-                <div class="container">
-                <ul class="split_list unstyled"></ul>
-            </div>
+                        <ul id="split_list" class="unstyled"></ul>
                 </div>
                 <div class="span7">
                     <div id="plot"></div>
                 </div>
-                <div class="span3"></div>
+                <div class="span2"></div>
             </div>
         </div>
     <!--[if lt IE 7]>    
@@ -105,10 +80,10 @@
 
     <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->    
     <script>
-            var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
-            (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-            g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-            s.parentNode.insertBefore(g,s)}(document,'script'));
+            // var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
+            // (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+            // g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+            // s.parentNode.insertBefore(g,s)}(document,'script'));
         </script>
 
     <!-- build:js scripts/main.js -->    

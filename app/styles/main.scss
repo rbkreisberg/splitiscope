@@ -1,6 +1,7 @@
 
 $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
+@import 'vis';
 
 /* states and images */
 .ui-icon { background-image: url("../images/ui-icons_333333_256x240.png"); }
@@ -12,26 +13,22 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 .ui-state-highlight .ui-icon {background-image: url("../images/ui-icons_888888_256x240.png"); }
 .ui-state-error .ui-icon, .ui-state-error-text .ui-icon {background-image: url("../images/ui-icons_B94A48_256x240.png"); }
 
-
-
-.split_item {
-    font-size: 12px;
-    vertical-align: middle;
-}
-
-.split_item i {
-    vertical-align: middle;
-}
-
-
 .hero-unit {
-    margin: 50px auto 0 auto;
-    width: 300px;
+  margin: 50px auto 0 auto;
+  width: 300px;
 }
 
-.split_item i[class^="icon-"], .split_item i[class*=" icon-"] {
-    width: auto;
-    vertical-align: baseline;
+#split_list {
+  margin: 0; padding: 0;
+}
+
+.split_placeholder {
+  background-color: #eed;
+}
+
+#plot {
+  height: 600px; 
+  width: 800px;
 }
 
 body {

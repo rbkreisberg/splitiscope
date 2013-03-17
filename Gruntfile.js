@@ -150,7 +150,7 @@ module.exports = function (grunt) {
                 javascriptsDir: '<%= yeoman.app %>/scripts',
                 fontsDir: '<%= yeoman.app %>/styles/fonts',
                 importPath: 'app/components',
-                relativeAssets: false,
+                relativeAssets: true,
                 raw: 'http_images_path = \'../images\'\nhttp_generated_images_path = \'../images\'\n'
             },
             dist: {},
