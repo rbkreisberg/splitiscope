@@ -67,19 +67,31 @@ define([
             //spin up jquery hooks
              function jquery_hooks() {
                 
-                var trash = '#trash';
+                var $trash = $( '#trash') ;
 
                 $( split_list ).sortable({
                     placeholder: 'split_placeholder',
                     forcePlaceholderSize: true,
-                    cursor: 'move'
+                    containment:'document',
+                    cursor: 'move',
+                    axis: 'y',
+                    opacity: 0.7,
+                    scroll: true,
+                    scrollSensitivity: 2,
+                    scrollSpeed: 20,
+                    start: function(event, ui) {
+                        $trash.addClass('ui-state-highlight');
+                    }
                     }).disableSelection();
 
                 // let the trash be droppable, accepting the split items
-                $(trash).droppable({
-                  accept: split_list + ' ' + split_item,
+                $trash.droppable({
+                  accept: split_item,
+                  hoverClass: "ui-state-highlight",
                   activeClass: "ui-state-highlight",
-                  hoverClass: " ui-state-default",
+                  activate : function( event, ui ) {
+                    $(this).addClass('ui-state-highlight');
+                  },
                   drop: function( event, ui ) {
                     console.log('drop');
                     ui.draggable.fadeOut(function() {
@@ -90,17 +102,6 @@ define([
 
               }
             jquery_hooks();
-
-            function make_draggable($el) {
-                // let the split items be draggable
-                $el.draggable({
-                  revert: "invalid", // when not dropped, the item will revert back to its initial position
-                  containment: "document",
-                  cursor: "move"
-                }).disableSelection();
-                
-                return $el;
-            }
 
             // queue()
             //     //.defer(d3.json, 'http://')
@@ -140,9 +141,9 @@ var format = d3.format('.3f');
                                             };
                                          
                                             $( split_list ).prepend(splitItemTemplate({splitItem:  {x: x, y:y}}));
-                                            // make_draggable($( split_item ));
                                 })
                                 .render();
+                                $('#plot > text').disableSelection();
                         };
                 plot(test_data);
         }

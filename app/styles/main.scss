@@ -3,16 +3,6 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
 @import 'vis';
 
-/* states and images */
-.ui-icon { background-image: url("../images/ui-icons_333333_256x240.png"); }
-.ui-widget-content .ui-icon {background-image: url("../images/ui-icons_333333_256x240.png"); }
-.ui-widget-header .ui-icon {background-image: url("../images/ui-icons_333333_256x240.png"); }
-.ui-state-default .ui-icon { background-image: url("../images/ui-icons_888888_256x240.png"); }
-.ui-state-hover .ui-icon, .ui-state-focus .ui-icon {background-image: url("../images/ui-icons_454545_256x240.png"); }
-.ui-state-active .ui-icon {background-image: url("../images/ui-icons_454545_256x240.png"); }
-.ui-state-highlight .ui-icon {background-image: url("../images/ui-icons_888888_256x240.png"); }
-.ui-state-error .ui-icon, .ui-state-error-text .ui-icon {background-image: url("../images/ui-icons_B94A48_256x240.png"); }
-
 .hero-unit {
   margin: 50px auto 0 auto;
   width: 300px;
@@ -22,8 +12,37 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
   margin: 0; padding: 0;
 }
 
+#trash { 
+  display: table;
+  vertical-align: middle;
+}
+
+#trash .trash-label, #trash i {
+  vertical-align:middle;
+  display: table-cell;
+}
+
+#trash .trash-label {
+  font-size : 24px;
+}
+
+.split_item, .split_placeholder {
+  margin-top:5px;
+}
+
+.split_item {
+  background-color: #EFF04D;
+  cursor: move;
+}
+
+.split_item  i{
+  margin-top: 5px;
+}
+
 .split_placeholder {
   background-color: #eed;
+  border-width: 1px;
+  border-color: #222;
 }
 
 #plot {
