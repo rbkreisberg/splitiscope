@@ -1,7 +1,7 @@
 
 $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
-@import '../components/sass-bootstrap/lib/responsive';
+//@import '../components/sass-bootstrap/lib/responsive';
 @import 'vis';
 
 .hero-unit {
@@ -38,10 +38,15 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
   cursor: move;
   font-size:12px;
   line-height:1.5em;
+  width: 100%;
 }
 
-.split_item  i{
+.split_item  i {
   margin: auto 0 auto 0;
+}
+
+.split_item div {
+    text-align: right;
 }
 
 .split_placeholder {
@@ -51,13 +56,18 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 }
 
 #plot {
-  height : 80%; 
-  min-height : 400px;
+  height : 100%;
+  max-height: 600px;
   width : 100%;
 }
 .splitiscope {
   height: 100%;
   width: 100%;
+}
+
+#legend {
+    margin-top: 30px;
+    border: 1px black solid;
 }
 
 body {

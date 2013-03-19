@@ -27,10 +27,12 @@ define([
 
     test_data.x = _.map(_.range(num),function(value) {
                 return (Math.random()*(x_range.max - x_range.min) + x_range.min);
+                //return ['A','B','C','D'][Math.round(Math.random()*3)];
     });
 
     test_data.y = _.map(_.range(num),function(value) {
                 return (Math.random()*(y_range.max - y_range.min) + y_range.min);
+                //return ['A','B','C','D'][Math.round(Math.random()*3)];
     });
 
    test_data.label = _.map(_.range(num),function(value) {
@@ -90,12 +92,12 @@ define([
                 var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
                     var split = (warehouse.get(el).split);
                     var keys = _.keys(split);
-                            return _.extend(_.object(keys, _.map(keys, function(axis){
+                            return _.extend( memo , _.object(keys, _.map(keys, function(axis){
                                 return {
                                  low: Math.max( split[axis].low, memo[axis].low ),
                                  high: Math.min( split[axis].high, memo[axis].high )
                                 };
-                            })), memo );
+                            })) );
                 }, { x :{ low: -Infinity, high: Infinity }, 
                      y :{ low: -Infinity, high: Infinity } } 
                 );
@@ -134,7 +136,7 @@ define([
                   accept: split_item,
                   hoverClass: "ui-state-highlight",
                   activeClass: "ui-state-highlight",
-                  tolerance : 'touch',
+                  tolerance : 'pointer',
                   activate : function( event, ui ) {
                     $(this).addClass('ui-state-highlight');
                   },
@@ -164,7 +166,11 @@ define([
 
                     // });
 
-    function updateTotals() {
+    function updateSplitsTemplates() {
+
+    }
+
+    function updateTotalsTemplates() {
         $('#summary').html(totalsItemTemplate({
             filtered_total :  all.value(),
             total : data_filter.size()
@@ -177,8 +183,9 @@ define([
     function updateSplitiscope() {
         splitiscope.data(filter.x.top(Infinity)).render();
     }
+
     function refreshDisplays() {
-        updateTotals();
+        updateTotalsTemplates();
         updateSplitiscope();
     }
 
