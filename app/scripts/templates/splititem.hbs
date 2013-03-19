@@ -1,3 +1,14 @@
 <li class="split_item">
-       <i class="icon-resize-vertical icon-2x pull-left"></i> <div>{{splitItem.x.label}}: {{splitItem.x.low}} - {{splitItem.x.high}}<br/>{{splitItem.y.label}}: {{splitItem.y.low}} - {{splitItem.y.high}}</div>
+       <i class="icon-resize-vertical icon-large pull-left"></i> 
+       <div>
+       {{#with splitItem}}
+       {{#if x}}
+          {{x.label}}: {{x.low}} - {{x.high}}
+          <br/>
+       {{/if}}
+       {{#if y}}
+          {{y.label}}: {{y.low}} - {{y.high}}
+        {{/if}}
+        {{/with}}
+      </div>
 </li>

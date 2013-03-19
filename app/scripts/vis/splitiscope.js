@@ -88,8 +88,8 @@ var __ = {
   var splitiscope = function(selection) {
     selection = splitiscope.selection = d3.select(selection);
 
-    __.width = 1000; //selection[0][0].clientWidth;
-    __.height = 1000; //selection[0][0].clientHeight;
+    __.width = 800; //selection[0][0].clientWidth;
+    __.height = 600; //selection[0][0].clientHeight;
 
     setAxes();
 
@@ -98,8 +98,8 @@ var __ = {
                    .append('svg')
                     .attr('class','splitiscope')
                    .append('svg')
-                    .attr('viewBox','0 0 1000 800' )
-                    .attr('preserveAspectRatio','xMidYMin meet')
+                    .attr('viewBox','0 0 ' + __.width + ' ' + __.height)
+                    .attr('preserveAspectRatio','xMidYMin meet');
                     // .attr('height',__.height)
                     // .attr('width',__.width );
 
@@ -549,9 +549,9 @@ function drawYSplits() {
                         var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
                         var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
                       
-                        var split_obj = {x: null, y: null};
-                        split_obj.x = _.clone(x);
-                        split_obj.y = _.clone(y);
+                        var split_obj = {};
+                        if (!_.isNull(split_data['x'].span)) split_obj.x = _.clone(x);
+                        if (!_.isNull(split_data['y'].span)) split_obj.y = _.clone(y);
                         events.partition( split_obj );
                       });              
 
@@ -579,12 +579,12 @@ function drawYSplits() {
                 .remove();
   }
 
-function mousemove_fn(axis) {
-  return function(){ 
+  function mousemove_fn(axis) {
+    return function(){ 
                 var position = d3.mouse(this)[axis === 'x' ? 0 : 1];
                 if (selected[axis] === null) selectSplitValue(position, axis);            
-  };
-}
+  } ;
+  }
 
   function mouseover_fn(el,index, axis) {
                if (selected[axis] === index) {
@@ -624,11 +624,9 @@ function clearAllSplitSelections() {
 }
 
   function clearSplitSelection(axis){
-       // var selector = '.' + axis + ' .split_line,.' + axis + ' .split_bubble';
-       //                d3.selectAll(selector).style('stroke-opacity',1).style('fill-opacity',1);
-
+      if ( _.isNull(split_data[axis].span) ) return;
       split_data[axis].span = null;
-      clearPartitionSpans();
+      drawPartitionSpans();
       updateSplitTextLabel(null, axis);
 
   }

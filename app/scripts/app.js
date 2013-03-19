@@ -6,7 +6,8 @@ define([
     'data',
     'hbs!templates/splititem',
     'hbs!templates/totals',
-], function (queue, split_vis, crossfilter, warehouse, splitItemTemplate, totalsItemTemplate) {
+    'hbs!templates/classList',
+], function (queue, split_vis, crossfilter, warehouse, splitItemTemplate, totalsItemTemplate, classListTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -76,38 +77,42 @@ define([
             var split_list = '#split_list',
                 split_item = 'li.split_item';
             
-            var xfilter = data_filter.dimension(function(d) { return d.x;}),
-                yfilter = data_filter.dimension(function(d) { return d.y;});
+            var filter = {
+                        x: data_filter.dimension(function(d) { return d.x;}),
+                        y: data_filter.dimension(function(d) { return d.y;})
+                    },
+                classLabel = data_filter.dimension(function(d) { return d.label;}),
+                classGroup = classLabel.group().reduceCount();
 
             function refilter() {
-                xfilter.filter(null);
-                yfilter.filter(null);
+                filter.x.filter(null);
+                filter.y.filter(null);
                 var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
-                    var split = warehouse.get(el).split;
-                    return {
-                            x: {
-                                 low: Math.max(split.x.low, memo.x.low),
-                                 high: Math.min(split.x.high, memo.x.high)
-                             },
-                             y: {
-                                 low: Math.max(split.y.low, memo.y.low),
-                                 high: Math.min(split.y.high, memo.y.high)
-                             },
-                }
-            }, { x :{ low: -Infinity, high: Infinity}, y :{ low: -Infinity, high: Infinity } } 
+                    var split = (warehouse.get(el).split);
+                    var keys = _.keys(split);
+                            return _.extend(_.object(keys, _.map(keys, function(axis){
+                                return {
+                                 low: Math.max( split[axis].low, memo[axis].low ),
+                                 high: Math.min( split[axis].high, memo[axis].high )
+                                };
+                            })), memo );
+                }, { x :{ low: -Infinity, high: Infinity }, 
+                     y :{ low: -Infinity, high: Infinity } } 
                 );
                 filterData(s);
             }
 
             function filterData(split) {
-                xfilter.filterRange(_.map([split.x.low, split.x.high], parseFloat));
-                yfilter.filterRange(_.map([split.y.low, split.y.high], parseFloat));
+                var keys = _.keys( split );
+                _.each(keys, function(axis) {
+                    filter[axis].filterRange(_.map([split[axis].low, split[axis].high], parseFloat));
+                });
             }
 
             //spin up jquery hooks
              function jquery_hooks() {
                 
-                var $trash = $( '#trash') ;
+                var $trash = $( '#trash, #trash i, #trash div') ;
 
                 $( split_list ).sortable({
                     placeholder: 'split_placeholder',
@@ -129,6 +134,7 @@ define([
                   accept: split_item,
                   hoverClass: "ui-state-highlight",
                   activeClass: "ui-state-highlight",
+                  tolerance : 'touch',
                   activate : function( event, ui ) {
                     $(this).addClass('ui-state-highlight');
                   },
@@ -163,10 +169,13 @@ define([
             filtered_total :  all.value(),
             total : data_filter.size()
         }));
+        $('#classInfo').html(classListTemplate({
+            classList: classGroup.top(Infinity)
+        }));
     }
 
     function updateSplitiscope() {
-        splitiscope.data(xfilter.top(Infinity)).render();
+        splitiscope.data(filter.x.top(Infinity)).render();
     }
     function refreshDisplays() {
         updateTotals();
@@ -183,27 +192,25 @@ define([
                                             top: 10, left: 10, bottom: 30, right: 40
                                 }
                             })(plot_container)
-                            .data(xfilter.top(Infinity))
+                            .data(filter.x.top(Infinity))
                             .splits( {
                                 x: test_split_x, 
                                 y: test_split_y
                             } )
                             .on('partition',function(split_obj) {
-                                 var x = {
-                                            label: labels.x, 
-                                            low: format(split_obj.x.low),
-                                            high: format(split_obj.x.high)
-                                        },
-                                        y = {
-                                            label: labels.y, 
-                                            low: format(split_obj.y.low),
-                                            high: format(split_obj.y.high)
-                                        };
 
+                                var keys = _.keys(split_obj);
+                            var splitItem = _.object(keys, _.map(keys, function(axis){
+                                return {
+                                            label: labels[axis],
+                                            low: format(split_obj[axis].low),
+                                            high: format(split_obj[axis].high)
+                                };
+                            }));
                                    filterData(split_obj);
                                    refreshDisplays();
                                      
-                                    var new_el = $.parseHTML( splitItemTemplate({ splitItem : { x: x, y: y } }) )[0];
+                                    var new_el = $.parseHTML( splitItemTemplate({ "splitItem" : splitItem }) )[0];
                                     $( split_list ).prepend(new_el);
                                     
                                     warehouse.set(new_el, {split: split_obj});
