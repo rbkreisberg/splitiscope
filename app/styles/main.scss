@@ -16,6 +16,7 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 #trash { 
   display: table;
   vertical-align: middle;
+  padding: 5px 5px 5px 5px;
 }
 
 #trash .trash-label, #trash i {
@@ -24,20 +25,23 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 }
 
 #trash .trash-label {
-  font-size : 24px;
+  font-size : 18px;
 }
 
 .split_item, .split_placeholder {
-  margin-top:5px;
+  margin-top: 5px;
+  padding: 5px 5px 5px 5px;
 }
 
 .split_item {
   background-color: #EFF04D;
   cursor: move;
+  font-size:12px;
+  line-height:1.5em;
 }
 
 .split_item  i{
-  margin-top: 5px;
+  margin: auto 0 auto 0;
 }
 
 .split_placeholder {
@@ -52,8 +56,8 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
   width : 100%;
 }
 .splitiscope {
-    height: 100%;
-    width: 100%;
+  height: 100%;
+  width: 100%;
 }
 
 body {
