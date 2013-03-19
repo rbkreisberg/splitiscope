@@ -6,10 +6,9 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Splitiscope</title>
         <meta name="description" content="">
-        <meta name="viewport" content="width=device-width">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
         <link rel="stylesheet" href="styles/main.css">
         <!-- build:js scripts/vendor/modernizr.js -->
@@ -46,32 +45,44 @@
             </div>
         </div>
         <!-- /.navbar -->        
-        <div class="masthead">
-            <div class="container">
-                <h3 class="muted">Random Forest Splitiscope</h3>
+        <div class="container-fluid">
+            <div class="masthead text-center">
+                <h3>Random Forest Splitiscope</h3>
             </div>
-        </div>
-        <div class="container">
-            <div class="row">
-                <div class="span2" style="padding-top:100px;">
-                    <div id="trash" class="label label-important">
-                            <i class="icon-trash icon-2x pull-left"></i>
-                            <div class="trash-label"> Trash</div>
+
+            <div class="container-fluid">
+                <div class="row-fluid">
+                    <div class="span2" >
+                        <div class="row">
+                            <div id="trash" class="label label-important"> <i class="icon-trash icon-2x pull-left"></i>
+                                <div class="trash-label">Trash</div>
+                            </div>
+                            <ul id="split_list" class="unstyled"></ul>
+                        </div>
+                        <div class="row">
+                            <div id="legend">
+                                <h4>Color Legend</h4>
+                            </div>
+                        </div>
                     </div>
-                        <ul id="split_list" class="unstyled"></ul>
-                </div>
-                <div class="span8">
-                    <div id="plot"></div>
-                </div>
-                <div class="span2">
-                    <div id="summary"></div>
-                    <div id="classInfo"></div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="span7 offset3">
-                    Left: Remove defined splits by dropping them in the trash.<br/>
-                    Center: Select splits from the "split bars" on the top and left of the plot.  <Br/>Click on split bar to persist a split.<br/>Initiate a split by clicking inside of a partitioned space.
+                    <div class="span8">
+                        <div id="plot"></div>
+                        <br/>        
+                        <div id="description">
+                            Left: Remove defined splits by dropping them in the trash.
+                            <br/>        
+                            Center: Select splits from the "split bars" on the top and left of the plot.
+                            <Br/>        
+                            Click on split bar to persist a split.
+                            <br/>        
+                            Initiate a split by clicking inside of a partitioned space.
+                        </div>
+                    </div>
+                    <div class="span2">
+                        <div id="summary"></div>
+                        <div id="classInfo"></div>
+                        <div id="splitInfo"></div>
+                    </div>
                 </div>
             </div>
         </div>
