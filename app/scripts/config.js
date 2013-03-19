@@ -18,7 +18,8 @@ require.config({
       'hbs' : '../components/require-handlebars-plugin/hbs',
       'handlebars' : '../components/require-handlebars-plugin/Handlebars',
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
-      'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile'
+      'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
+      'crossfilter' : '../components/crossfilter/crossfilter'
   },
   "shim": {
       "backbone": {
@@ -40,6 +41,9 @@ require.config({
       },
        "queue" : {
           "exports" : "queue"
+      },
+      "crossfilter": {
+        "exports" : "crossfilter"
       }
   },
   "hbs" : {

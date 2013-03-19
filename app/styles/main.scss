@@ -1,6 +1,7 @@
 
 $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
+@import '../components/sass-bootstrap/lib/responsive';
 @import 'vis';
 
 .hero-unit {
@@ -46,8 +47,13 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 }
 
 #plot {
-  height: 600px; 
-  width: 800px;
+  height : 80%; 
+  min-height : 400px;
+  width : 100%;
+}
+.splitiscope {
+    height: 100%;
+    width: 100%;
 }
 
 body {

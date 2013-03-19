@@ -2,8 +2,11 @@
 define([
     'queue', 
     'splitiscope',
-    'hbs!templates/splititem'
-], function (queue, split_vis, splitItemTemplate) {
+    'crossfilter',
+    'data',
+    'hbs!templates/splititem',
+    'hbs!templates/totals',
+], function (queue, split_vis, crossfilter, warehouse, splitItemTemplate, totalsItemTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -41,6 +44,15 @@ define([
                 return String.fromCharCode.apply(this, _.map(_.range(5),function()  { return Math.random()*26 + 65;}));
     });
 
+   var keys = _.keys(test_data);
+
+   var data = _.map(test_data.x, function(value,index) {
+                        return _.object(keys, _.map(keys,function(k) {return test_data[k][index];}));
+   });
+
+   var data_filter = crossfilter(data),
+        all = data_filter.groupAll();
+
     var test_split_x = {
 
                 bins: _.map(_.range(1,9), function(value) {
@@ -63,6 +75,34 @@ define([
         initialize: function(){
             var split_list = '#split_list',
                 split_item = 'li.split_item';
+            
+            var xfilter = data_filter.dimension(function(d) { return d.x;}),
+                yfilter = data_filter.dimension(function(d) { return d.y;});
+
+            function refilter() {
+                xfilter.filter(null);
+                yfilter.filter(null);
+                var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
+                    var split = warehouse.get(el).split;
+                    return {
+                            x: {
+                                 low: Math.max(split.x.low, memo.x.low),
+                                 high: Math.min(split.x.high, memo.x.high)
+                             },
+                             y: {
+                                 low: Math.max(split.y.low, memo.y.low),
+                                 high: Math.min(split.y.high, memo.y.high)
+                             },
+                }
+            }, { x :{ low: -Infinity, high: Infinity}, y :{ low: -Infinity, high: Infinity } } 
+                );
+                filterData(s);
+            }
+
+            function filterData(split) {
+                xfilter.filterRange(_.map([split.x.low, split.x.high], parseFloat));
+                yfilter.filterRange(_.map([split.y.low, split.y.high], parseFloat));
+            }
 
             //spin up jquery hooks
              function jquery_hooks() {
@@ -96,8 +136,10 @@ define([
                     console.log('drop');
                     ui.draggable.fadeOut(function() {
                         ui.draggable.remove();
+                        refilter();
+                        refreshDisplays();
                     });
-                    }
+                  }
                 }).disableSelection();
 
               }
@@ -115,37 +157,60 @@ define([
                     //     }
 
                     // });
-var format = d3.format('.3f');
+
+    function updateTotals() {
+        $('#summary').html(totalsItemTemplate({
+            filtered_total :  all.value(),
+            total : data_filter.size()
+        }));
+    }
+
+    function updateSplitiscope() {
+        splitiscope.data(xfilter.top(Infinity)).render();
+    }
+    function refreshDisplays() {
+        updateTotals();
+        updateSplitiscope();
+    }
+
+    var splitiscope;
+    var plot_container = '#plot';
+    var format = d3.format('.3f');
                     var plot = function(data) {
-                            var splitiscope = split_vis({
+                            splitiscope = split_vis({
                                 radius: 12,
                                 margin : {
                                             top: 10, left: 10, bottom: 30, right: 40
                                 }
-                            });
-                            $('#plot').empty();
-                            splitiscope('#plot')
-                            .data(data)
-                            .splits({x:test_split_x, y: test_split_y})
-                            .on('partition',function(data,split_obj) {
-                                            plot(data);
-                                            var x = {
-                                                label: labels.x, 
-                                                low: format(split_obj.x.low),
-                                                high: format(split_obj.x.high)
-                                            },
-                                                y = {
-                                                label: labels.y, 
-                                                low: format(split_obj.y.low),
-                                                high: format(split_obj.y.high)
-                                            };
-                                         
-                                            $( split_list ).prepend(splitItemTemplate({splitItem:  {x: x, y:y}}));
+                            })(plot_container)
+                            .data(xfilter.top(Infinity))
+                            .splits( {
+                                x: test_split_x, 
+                                y: test_split_y
+                            } )
+                            .on('partition',function(split_obj) {
+                                 var x = {
+                                            label: labels.x, 
+                                            low: format(split_obj.x.low),
+                                            high: format(split_obj.x.high)
+                                        },
+                                        y = {
+                                            label: labels.y, 
+                                            low: format(split_obj.y.low),
+                                            high: format(split_obj.y.high)
+                                        };
+
+                                   filterData(split_obj);
+                                   refreshDisplays();
+                                     
+                                    var new_el = $.parseHTML( splitItemTemplate({ splitItem : { x: x, y: y } }) )[0];
+                                    $( split_list ).prepend(new_el);
+                                    
+                                    warehouse.set(new_el, {split: split_obj});
                                 })
                                 .render();
-                                $('#plot > text').disableSelection();
                         };
-                plot(test_data);
+                plot(data);
         }
     };
     return Application;
