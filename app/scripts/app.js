@@ -31,8 +31,8 @@ define([
     });
 
     test_data.y = _.map(_.range(num),function(value) {
-                return (Math.random()*(y_range.max - y_range.min) + y_range.min);
-                //return ['A','B','C','D'][Math.round(Math.random()*3)];
+             //   return (Math.random()*(y_range.max - y_range.min) + y_range.min);
+                return ['A','B','C','D'][Math.round(Math.random()*3)];
     });
 
    test_data.label = _.map(_.range(num),function(value) {
@@ -175,8 +175,15 @@ define([
             filtered_total :  all.value(),
             total : data_filter.size()
         }));
+
+        var color = splitiscope.categoryColor();
+
+        var group = _.map( _.sortBy(classGroup.top(Infinity),'key'), function(group_obj) {
+            group_obj.color = color(group_obj.key);
+            return group_obj;
+        });
         $('#classInfo').html(classListTemplate({
-            classList: classGroup.top(Infinity)
+            classList: group
         }));
     }
 
@@ -185,8 +192,8 @@ define([
     }
 
     function refreshDisplays() {
-        updateTotalsTemplates();
         updateSplitiscope();
+        updateTotalsTemplates();
     }
 
     var splitiscope;
@@ -199,11 +206,6 @@ define([
                                             top: 10, left: 10, bottom: 30, right: 40
                                 }
                             })(plot_container)
-                            .data(filter.x.top(Infinity))
-                            .splits( {
-                                x: test_split_x, 
-                                y: test_split_y
-                            } )
                             .on('partition',function(split_obj) {
 
                                 var keys = _.keys(split_obj);
@@ -221,8 +223,8 @@ define([
                                     $( split_list ).prepend(new_el);
                                     
                                     warehouse.set(new_el, {split: split_obj});
-                                })
-                                .render();
+                                });
+                            refreshDisplays();
                         };
                 plot(data);
         }

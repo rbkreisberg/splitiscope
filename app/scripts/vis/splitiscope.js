@@ -38,7 +38,8 @@ var __ = {
     xDataType : 'numerical',
     yDataType : 'numerical',
     data : {x:[],y:[], label:[] },
-    splits : {},   
+    splits : {},
+    categoryColor : null
  };
 
   _.extend(__, config);
@@ -82,8 +83,8 @@ var __ = {
   // side effects for setters
   var side_effects = d3.dispatch.apply(this,d3.keys(__))
     .on("radius", function(d) { symbolSize = Math.pow(__.radius,2);})
-    .on("data", function(d) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('new data');})
-    .on("splits", function(d) { parseSplits(); console.log('new splits');});
+    .on("data", function(d) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
+    .on("splits", function(d) { parseSplits(); console.log('splitscope: splits loaded');});
    
   var splitiscope = function(selection) {
     selection = splitiscope.selection = d3.select(selection);
@@ -99,7 +100,7 @@ var __ = {
                     .attr('class','splitiscope')
                    .append('svg')
                     .attr('viewBox','0 0 ' + __.width + ' ' + __.height)
-                    .attr('preserveAspectRatio','xMidYMin meet');
+                    .attr('preserveAspectRatio','xMinYMin meet');
                     // .attr('height',__.height)
                     // .attr('width',__.width );
 
@@ -207,8 +208,8 @@ function updateAxes() {
   var y_axis = bottom_surface.select('.y.axis'), 
       x_axis = bottom_surface.select('.x.axis');
 
-  y_axis.transition().duration(update_duration).call(yaxis);
-  x_axis.transition().duration(update_duration).call(xaxis);
+  y_axis.transition().duration(update_duration).call(yaxis.scale(scales.y));
+  x_axis.transition().duration(update_duration).call(xaxis.scale(scales.x));
 }
 
   function drawAxes() {
@@ -260,7 +261,7 @@ function updateAxes() {
                             scales.y(point.y) + ')';})
                           .attr('d',symbolFunction(0).size(symbolSize)())
                           .style('fill',function(point) {
-                                                  return categoryLabelScale(point[__.colorLabel]);
+                                                  return __.categoryColor(point[__.colorLabel]);
                           })
                           .style('fill-opacity',0)
                         .transition()
@@ -285,7 +286,6 @@ function updateAxes() {
   };
 
 function drawSplits() {
-    if ( split_surface.select('.split_group').node() !== null ) { return; }
     drawXSplits();
     drawYSplits();
 }
@@ -314,46 +314,41 @@ function drawOrdinalXSplits () {
   var axis = 'x',
    xsplits = split_surface.append('g').attr('class','x split_group');
 
-  var xExtent = scales.x.range(),
+  var xDomain = scales.x.domain(),
+      xExtent = scales.x.range(),
          band = ((scales.x.rangeExtent()[1] - scales.x.rangeExtent()[0]) / xExtent.length) - 10;
 
-  xsplits.selectAll('rect')
-            .data(xExtent)
-          .enter()
-           .append('rect')             
-              .attr('x', function(d) { return d - band/2; })
+  var splits = splits.selectAll('rect')
+            .data( xDomain, String );
+
+      splits.enter()
+           .append('rect')     
+              .attr('transform',function(d) { return 'translate(' + scales.x(d) - band/2 + ',0)'; } )
+              .attr('x', 0)
               .attr('width', band)
               .attr('y', -1 * padding.top)
               .attr('height', padding.top)
               .call(styleSplitSelector, 'x')
-              .on('mouseover',function(){
-                var position = d3.mouse(this)[0];
-                if (selected[axis] === null) selectSplitValue(position, axis);
+              .on('mouseover', function() {
+                d3.select(this)
+                    .style('fill-opacity', 1.0);
               })
-              .on('mousemove',mousemove_fn(axis))
               .on('mouseout', function() {
-                if (selected[axis] === null) clearSplitSelection(axis);
+                d3.select(this)
+                    .style('fill-opacity', 0.3);
               })
-              .on('click', function() {
-                  var position = d3.mouse(this)[0];
-                  selectSplitValue(position,axis);
-                  if (selected[axis] !== null) {
-                    clearSplitPointer(axis);
-                    selected[axis] = null;
+              .on('click', function(val) {
+                 if ( _.contains(selected['x'], val )) {
+                    removeCategoricalSplitValue(val, 'x');
                   }
-                  else { 
-                    selected[axis] = position;
-                    xsplits.append('path')
-                        .attr('class',axis + ' split_pointer')
-                        .attr('transform','translate('+position+',0)')
-                        .attr('d',function(d,i) {
-                          return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
-                          })
-                        .style('stroke', '#cc6432')
-                        .style('stroke-width',4.0)
-                        .style('fill','#cc6432');
-                      }
-                });
+                  else {
+                    selectCategoricalSplitValue(val, 'x');
+                  }
+              });
+
+    splits.transition()
+                  .duration(update_duration)
+                  .attr('transform',function(d) { return 'translate(' + scales.x(d) - band/2 + ',0)'; } );
 }
 
 function drawNumericalXSplits () {
@@ -398,52 +393,6 @@ function drawNumericalXSplits () {
                       }
                 });
               
-    // if (!_.isUndefined(split_data.x.data_array)) {
-    // var splits = xsplits                    
-    //                 .selectAll('.x .splits')
-    //                 .data(split_data.x.data_array)                   
-    //               .enter()
-    //               .append('g')
-    //               .attr('class','x splits')
-    //               .on('click', function(split_val,i) {
-    //                       mouseover_fn(this, i, 'x');
-    //                    })
-    //                .on('mouseover',function(split_val,i){
-    //                   if (selected['x'] === null) makeSplitSelection(this, i, 'x');
-    //                 });
-                   
-    //               splits.append('rect')
-    //                 .attr('class','split_bubble')
-    //                 .attr('x',function(d,i) { return split_data.x.binScale(i)-20;})
-    //                 .attr('width', 40)
-    //                 .attr('y',-1 * padding.top)
-    //                 .attr('height',padding.top +10)
-    //                 .style('stroke',split_data.x.colorScale)
-    //                 .style('stroke-opacity','1')
-    //                 .style('stroke-width',0)
-    //                 .style('fill','transparent')
-    //                 .style('fill-opacity','1');
-
-    //       var split_line = splits.append('g')
-    //                 .attr('class','split_line')
-    //                 .attr('transform',function(d,i) { return 'translate('+split_data.x.binScale(i)+','+0+')';});
-                    
-    //           split_line 
-    //                 .append('path')
-    //                 .attr('d',function(d,i) {
-    //                   return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
-    //                   })
-    //                 .style('stroke',split_data.x.colorScale)
-    //                 .style('stroke-width',4.0)
-    //                 .style('fill',split_data.x.colorScale);
-
-    //           split_line
-    //                   .append("path")
-    //                   .style('stroke',split_data.x.colorScale)
-    //                   .style('stroke-width',4.0)
-    //                   .style('fill',split_data.x.colorScale)
-    //                   .attr("d", "M5,0L-5,0L0,5z");
-          // }
   }
 
 function styleSplitSelector( split_selector, axis ) {
@@ -465,19 +414,42 @@ function drawYSplits() {
 function drawOrdinalYSplits() {
 
   var ysplits = split_surface.append('g').attr('class','y split_group');
-  var yExtent = scales.y.range(),
+
+  var yDomain = scales.y.domain(),
+      yExtent = scales.y.range(),
         band = ((scales.y.rangeExtent()[1] - scales.y.rangeExtent()[0]) / yExtent.length) - 10;
 
-  ysplits.selectAll('rect')
-            .data(yExtent)
-          .enter()
-           .append('rect')             
+  var splits = ysplits.selectAll('rect')
+            .data( yDomain, String );
+          
+      splits.enter()
+           .append('rect')  
+           .attr('transform',function(d) { return 'translate(0,' + ( scales.y(d) - band/2 ) + ')'; } )
               .attr('x',-1 * padding.left)
               .attr('width', padding.left)
-              .attr('y', function(d) { return d - band/2; } )
+              .attr('y', 0 )
               .attr('height', band)
-              .call(styleSplitSelector, 'y');
+              .call(styleSplitSelector, 'y')
+              .on('mouseover', function() {
+                d3.select(this)
+                    .style('fill-opacity', 1.0);
+              })
+              .on('mouseout', function() {
+                d3.select(this)
+                    .style('fill-opacity', 0.3);
+              })
+              .on('click', function(val) {
+                  if ( _.contains(selected['y'], val )) {
+                    removeCategoricalSplitValue(val, 'y');
+                  }
+                  else {
+                    selectCategoricalSplitValue(val, 'y');
+                  }
+              });
 
+      splits.transition()
+              .duration(update_duration)
+              .attr('transform', function(d) { return 'translate(0,' + ( scales.y(d) - band/2 ) + ')'; } );
 }
 
 function drawNumericalYSplits() {
@@ -524,53 +496,7 @@ function drawNumericalYSplits() {
                         .style('fill','#cc6432');
                       }
                 });
-                                 
-    // if (!_.isUndefined(split_data.y.data_array)) {
 
-     // var splits = ysplits
-     //                .selectAll('.y .splits')
-     //                .data(split_data.y.data_array)
-     //              .enter()
-     //              .append('g')
-     //               .attr('class','y splits')
-     //               .on('click', function(split_val,i) {
-     //                      mouseover_fn(this,i,'y')
-     //                })
-     //               .on('mouseover',function(split_val,i){
-     //                    if (selected['y'] === null) makeSplitSelection(this,i,'y');
-     //                });
-
-          //         splits.append('rect')
-          //           .attr('class','split_bubble')
-          //           .attr('y',function(d,i) { return split_data.y.binScale(i)-20;})
-          //           .attr('height', 40)
-          //           .attr('x',-1 * padding.left)
-          //           .attr('width',padding.left + 10)
-          //           .style('stroke',split_data.y.colorScale)
-          //           .style('stroke-opacity','1')
-          //           .style('stroke-width',0)
-          //           .style('fill','transparent')
-          //           .style('fill-opacity','1');
-
-          // var split_line = splits.append('g')
-          //           .attr('class','split_line')
-          //           .attr('transform',function(d,i) { return 'translate('+0+',' + split_data.y.binScale(i) +')';});
-                    
-          //         split_line 
-          //           .append('path')
-          //           .attr('d',function(d,i) {
-          //             return "M" + "-" + padding.left + ",0h"+ padding.left;
-          //             })
-          //           .style('stroke',split_data.y.colorScale)
-          //           .style('stroke-width',4.0)
-          //           .style('fill',split_data.y.colorScale);
-
-          //         split_line.append("path")
-          //             .style('stroke',split_data.y.colorScale)
-          //             .style('stroke-width',4.0)
-          //             .style('fill',split_data.y.colorScale)
-          //             .attr("d", "M0,5L5,0L0,-5z");
-          // }
   }
 
   function drawPartitionSpans() {
@@ -686,15 +612,8 @@ function drawNumericalYSplits() {
   }
  
   function makeSplitSelection(el, index, axis){
-    // var selector = '.' + axis + ' .split_line,.' + axis + ' .split_bubble';
-    // var split = d3.select(el).selectAll(selector);
-    //                   d3.selectAll(selector).style('stroke-opacity',0.3).style('fill-opacity',0.3);
-    //                   split.style('stroke-opacity',1).style('fill-opacity',1);
-
     split_data[axis].span = split_data[axis].binScale(index);
-
     drawPartitionSpans();
- 
   }
 
   function selectSplitValue(position, axis) {
@@ -702,6 +621,38 @@ function drawNumericalYSplits() {
     split_data[axis].span = position;
     drawPartitionSpans();
     updateSplitTextLabel(position, axis);
+  }
+
+  function selectCategoricalSplitValue(value, axis) {
+    if (!_.contains(selected[axis], value)) selected[axis].push(value);
+    var remaining_values = _.difference( scales.y.domain(), selected[axis] );
+    var domain = _.union(selected[axis],remaining_values);
+    scales[axis].domain(domain);
+    var band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
+    split_data[axis].span  = scales[axis](value) - band/2;
+    drawData();
+    updateAxes();
+    drawSplits();
+    drawPartitionSpans();
+  }
+
+  function removeCategoricalSplitValue(value, axis) {
+    if (!_.contains(selected[axis], value)) return;
+    
+    selected[axis] = _.difference( selected[axis], [ value ] );
+    var len = selected[axis].length
+        remaining_values = len ? _.difference( scales[axis].domain(), selected[axis] ) : scales[axis].domain(),
+        domain = len ? _.union(selected[axis],remaining_values) : remaining_values,
+        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
+    
+    split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - band/2 : 0;
+
+    scales[axis].domain(domain);
+        
+    drawData();
+    updateAxes();
+    drawSplits();
+    drawPartitionSpans();
   }
 
   function clearAllSplitSelections() {
@@ -716,7 +667,6 @@ function drawNumericalYSplits() {
       split_data[axis].span = null;
       drawPartitionSpans();
       updateSplitTextLabel(null, axis);
-
   }
 
   function isOrdinal(array) {
@@ -761,18 +711,30 @@ function drawNumericalYSplits() {
     var colorLabels = _.pluck( data_array, __.colorLabel ),
         splits_on_x = _.pluck( data_array, 'splits_on_x' );
 
-    scales.x = __.xDataType === "ordinal" ?
-                     d3.scale.ordinal().domain(xVals.sort()).rangePoints([10,plotWidth()-10],1.0) :
-                     d3.scale.linear().domain(d3.extent(xVals)).range([10,plotWidth()-10]);
-   
-    scales.y = __.yDataType === "ordinal" ?
-                    d3.scale.ordinal().domain(yVals.sort(d3.descending)).rangePoints([plotHeight()-10,10],1.0) :
-                    d3.scale.linear().domain(d3.extent(yVals)).range([plotHeight()-10,10]);
+    if ( __.xDataType === "ordinal" ) {
+      scales.x = d3.scale.ordinal().domain(xVals.sort()).rangePoints([10,plotWidth()-10],1.0);
+      scales.x.invert = d3.scale.ordinal().domain(scales.x.range()).range(xVals);
+
+      selected.x = [];
+    } 
+    else { 
+      scales.x =d3.scale.linear().domain(d3.extent(xVals)).range([10,plotWidth()-10]);
+   }
+                     
+    if ( __.yDataType === "ordinal" ) {
+      scales.y = d3.scale.ordinal().domain(yVals.sort(d3.descending)).rangePoints([plotHeight()-10,10],1.0);
+      scales.y.invert = d3.scale.ordinal().domain(scales.y.range()).range(yVals);
+      
+      selected.y = [];
+    }
+    else { 
+      scales.y = d3.scale.linear().domain(d3.extent(yVals)).range([plotHeight()-10,10]);
+     }
 
     var numberOfCategories = _.uniq(colorLabels).length;
     var colorArray = _.first(__.pointColors,numberOfCategories);
 
-    categoryLabelScale = d3.scale.ordinal().domain(colorLabels).range(colorArray);
+    __.categoryColor = d3.scale.ordinal().domain(colorLabels).range(colorArray);
     caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
     
     return setAxes();
@@ -841,9 +803,6 @@ function drawNumericalYSplits() {
     
     yaxis.scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
     xaxis.scale(scales['x']).tickSize(2).ticks(5);
-
-    if (__.xDataType == 'ordinal') xaxis.ticks();
-    if (__.yDataType == 'ordinal') yaxis.ticks();
 
     return splitiscope;
   }

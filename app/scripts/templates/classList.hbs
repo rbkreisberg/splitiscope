@@ -1,6 +1,13 @@
-Displaying:<br/>
-<ul id="classList">
+<ul id="classList" class="unstyled">
 {{#each classList}}}
-<li class="classItem">{{key}}: {{value}}</li>
+<li class="classItem">
+<span  
+{{#if color}}
+ style="color: {{color}} ;"
+{{/if}}
+>{{key}}
+</span>
+: {{value}}
+</li>
 {{/each}}
 </ul>
