@@ -355,9 +355,7 @@ function drawOrdinalXSplits () {
               .attr('transform',function(d) { return 'translate(' + (scales.x(d) - band/2) + ',0)'; } )
               .attr('width', band);
 
-    splits.exit().transition()
-          .duration(update_duration)
-          .style('fill-opacity',0)
+    splits.exit()
           .remove();
 }
 
@@ -368,7 +366,10 @@ function drawNumericalXSplits () {
 
     var xExtent = scales.x.range();
     
-    var split_selector = xsplits.append('rect')             
+    var splits = xsplits.selectAll('rect')
+                      .data(["ZZZ"], String);
+    splits.enter()
+              .append('rect')             
               .attr('x',xExtent[0])
               .attr('width', xExtent[1] - xExtent[0])
               .attr('y', -1 * padding.top)
@@ -402,6 +403,9 @@ function drawNumericalXSplits () {
                         .style('fill','#cc6432');
                       }
                 });
+
+    splits.exit().remove();
+
               
   }
 
@@ -464,10 +468,7 @@ function drawOrdinalYSplits() {
               .attr('transform', function(d) { return 'translate(0,' + ( scales.y(d) - band/2 ) + ')'; } )
               .attr('height', band);
 
-      splits.exit().transition()
-          .duration(update_duration)
-          .style('fill-opacity',0)
-          .remove();
+      splits.exit().remove();
 }
 
 function drawNumericalYSplits() {
@@ -476,7 +477,10 @@ function drawNumericalYSplits() {
 
     var yExtent = scales.y.range();
      
-     ysplits.append('rect')
+     var splits = ysplits.selectAll('rect')
+                        .data(["ZZZ"], String);
+        splits.enter()
+              .append('rect')
               .attr('x',-1 * padding.left)
               .attr('width', padding.left)
               .attr('y',yExtent[1])
@@ -515,6 +519,7 @@ function drawNumericalYSplits() {
                       }
                 });
 
+    splits.exit().remove();
   }
 
   function drawPartitionSpans() {
@@ -586,7 +591,7 @@ function drawNumericalYSplits() {
                             split_obj.x = _.clone(x);
                           } else {
                             var xExtent = scales.x.range(),
-                                xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[2]; } );
+                                xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[0] + dims[2]; } );
                             split_obj.x = { values: _.map(xSelectedVals, scales.x.invert) };
                           }
                         }
@@ -597,7 +602,7 @@ function drawNumericalYSplits() {
                             split_obj.y = _.clone(y);
                           } else {
                             var yExtent = scales.y.range(),
-                                ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[3];} );
+                                ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[1] + dims[3];} );
                             split_obj.y = { values : _.map(ySelectedVals, scales.y.invert) };
                           }
                         }
@@ -660,11 +665,12 @@ function drawNumericalYSplits() {
 
   function selectCategoricalSplitValue(value, axis) {
     if (!_.contains(selected[axis], value)) selected[axis].push(value);
-    var remaining_values = _.difference( scales.y.domain(), selected[axis] ),
+    var remaining_values = _.difference( scales[axis].domain(), selected[axis] ),
         domain = _.union(selected[axis],remaining_values),
         band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
 
     scales[axis].domain(domain);
+    scales[axis].invert.range(domain);
     
     split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1));
     drawData();
@@ -683,6 +689,7 @@ function drawNumericalYSplits() {
         band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
     
     scales[axis].domain(domain);
+    scales[axis].invert.range(domain);
 
     split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
         

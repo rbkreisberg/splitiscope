@@ -14,8 +14,16 @@ define([
         console.error(msg);
     }
 
-    var x_range = { min : 0, max : 8},
-        y_range = { min :-4, max : 4},
+    var range = { 
+                x : {
+                    min : 0, 
+                    max : 8
+                },
+                y : { 
+                    min :-4, 
+                    max : 4
+                }
+            },
         splits_range = { min : 20, max : 200},
         label_list = ['high', 'low'],
         test_data = {},
@@ -25,15 +33,17 @@ define([
                     y : 'Feature Y'
                 };
 
-    test_data.x = _.map(_.range(num),function(value) {
-            //    return (Math.random()*(x_range.max - x_range.min) + x_range.min);
-                return ['A','B','C','D'][Math.round(Math.random()*3)];
-    });
+    function numerical_data(axis) {
+           return  _.map(_.range(num),function(value) {
+               return (Math.random()*(range[axis].max - range[axis].min) + range[axis].min);
+           });
+    }
 
-    test_data.y = _.map(_.range(num),function(value) {
-             //   return (Math.random()*(y_range.max - y_range.min) + y_range.min);
+    function categorical_data(axis) {
+           return _.map(_.range(num),function(value) {
                 return ['A','B','C','D'][Math.round(Math.random()*3)];
-    });
+            });
+    }
 
    test_data.label = _.map(_.range(num),function(value) {
                 return label_list[Math.round(Math.random() * (label_list.length-1))];
@@ -47,22 +57,14 @@ define([
                 return String.fromCharCode.apply(this, _.map(_.range(5),function()  { return Math.random()*26 + 65;}));
     });
 
-   var keys = _.keys(test_data);
-
-   var data = _.map(test_data.x, function(value,index) {
-                        return _.object(keys, _.map(keys,function(k) {return test_data[k][index];}));
-   });
-
-   var data_filter = crossfilter(data),
-        all = data_filter.groupAll();
-
+ 
     var test_split_x = {
 
                 bins: _.map(_.range(1,9), function(value) {
                    return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
                 }),
-                low: x_range.min + 1,
-                binsize: ((x_range.max -1) - (x_range.min +1)) / 10
+                low: range.x.min + 1,
+                binsize: ((range.x.max -1) - (range.x.min +1)) / 10
     };
 
     var test_split_y = {
@@ -70,8 +72,8 @@ define([
                 bins: _.map(_.range(1,9), function(value) {
                    return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
                 }),
-                low: y_range.min + 1,
-                binsize: ((y_range.max -1) - (y_range.min +1)) / 10
+                low: range.y.min + 1,
+                binsize: ((range.y.max -1) - (range.y.min +1)) / 10
     };
 
     var Application = {
@@ -79,12 +81,28 @@ define([
             var split_list = '#split_list',
                 split_item = 'li.split_item';
             
-            var filter = {
+
+            var keys, data, data_filter, all, classLabel, classGroup,
+                filter = {  x: null, y: null };
+                 
+
+            function set_data() {
+                    keys = _.keys(test_data);
+                    
+                    data = _.map(test_data.x, function(value,index) {
+                        return _.object(keys, _.map(keys,function(k) {return test_data[k][index];}));
+                    });
+                    
+                    data_filter = crossfilter(data);
+                    all = data_filter.groupAll();
+                    filter = {
                         x: data_filter.dimension(function(d) { return d.x;}),
                         y: data_filter.dimension(function(d) { return d.y;})
-                    },
-                classLabel = data_filter.dimension(function(d) { return d.label;}),
-                classGroup = classLabel.group().reduceCount();
+                        };
+                    
+                    classLabel = data_filter.dimension(function(d) { return d.label;});
+                    classGroup = classLabel.group().reduceCount();
+            }    
 
             function refilter() {
                 filter.x.filter(null);
@@ -115,7 +133,7 @@ define([
                 _.each(keys, function(axis) {
                     if (_.isFinite(split[axis].low)) {
                     filter[axis].filterRange(_.map([split[axis].low, split[axis].high], parseFloat));
-                } else {
+                } else if ( split[axis].values.length > 0) {
                     filter[axis].filterFunction(function(val) { return _.contains(split[axis].values, val ); } );
                 }
                 });
@@ -202,9 +220,40 @@ define([
     }
 
     function refreshDisplays() {
+        if( _.isUndefined(splitiscope) ) return;
         updateSplitiscope();
         updateTotalsTemplates();
     }
+
+    function selectElementHooks() {
+
+            $('#y_axis_selector').on('change', function(){
+                if ( $(this).val() ==='0' ) {
+                        test_data.y = numerical_data('y');
+                    } else {
+                        test_data.y = categorical_data('y');
+                    }
+                    set_data();
+                    refreshDisplays();
+            });
+
+            $('#x_axis_selector').on('change', function(){
+                    if ( $(this).val() ==='0' ) {
+                        test_data.x = numerical_data('x');
+                    } else {
+                        test_data.x = categorical_data('x');
+                    }
+                    set_data();
+                    refreshDisplays();
+            });
+    }
+
+    selectElementHooks();
+
+    $('#x_axis_selector').change();
+    $('#y_axis_selector').change();
+
+    set_data();
 
     var splitiscope;
     var plot_container = '#plot';
@@ -220,7 +269,7 @@ define([
 
                                 var keys = _.keys(split_obj);
                             var splitItem = _.object(keys, _.map(keys, function(axis){
-                                if ( _.isFinite(axis.low) ) {
+                                if ( _.isFinite(split_obj[axis].low) ) {
                                     return {
                                                 label: labels[axis],
                                                 low: format(split_obj[axis].low),

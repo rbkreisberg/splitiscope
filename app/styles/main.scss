@@ -69,6 +69,10 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
     border: 1px black solid;
 }
 
+#x_axis_selector, #y_axis_selector {
+  max-width: ($gridColumnWidth * 2 + ($gridGutterWidth * (2 - 1)));
+}
+
 body {
   position: relative;
   padding-top: 40px;
