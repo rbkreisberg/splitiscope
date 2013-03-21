@@ -26,8 +26,8 @@ define([
                 };
 
     test_data.x = _.map(_.range(num),function(value) {
-                return (Math.random()*(x_range.max - x_range.min) + x_range.min);
-                //return ['A','B','C','D'][Math.round(Math.random()*3)];
+            //    return (Math.random()*(x_range.max - x_range.min) + x_range.min);
+                return ['A','B','C','D'][Math.round(Math.random()*3)];
     });
 
     test_data.y = _.map(_.range(num),function(value) {
@@ -92,14 +92,20 @@ define([
                 var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
                     var split = (warehouse.get(el).split);
                     var keys = _.keys(split);
-                            return _.extend( memo , _.object(keys, _.map(keys, function(axis){
+                            return _.extend( memo , _.object(keys, _.map(keys, function(axis) {
+                                if (_.isFinite(split[axis].low) ) {
                                 return {
                                  low: Math.max( split[axis].low, memo[axis].low ),
                                  high: Math.min( split[axis].high, memo[axis].high )
                                 };
+                            } else if (_.isArray(split[axis].values)) { 
+                                 return {
+                                 values: _.union( split[axis].values, memo[axis].values )
+                                };
+                            }
                             })) );
-                }, { x :{ low: -Infinity, high: Infinity }, 
-                     y :{ low: -Infinity, high: Infinity } } 
+                }, { x :{ low: -Infinity, high: Infinity, values : [] }, 
+                     y :{ low: -Infinity, high: Infinity, values : [] } } 
                 );
                 filterData(s);
             }
@@ -107,7 +113,11 @@ define([
             function filterData(split) {
                 var keys = _.keys( split );
                 _.each(keys, function(axis) {
+                    if (_.isFinite(split[axis].low)) {
                     filter[axis].filterRange(_.map([split[axis].low, split[axis].high], parseFloat));
+                } else {
+                    filter[axis].filterFunction(function(val) { return _.contains(split[axis].values, val ); } );
+                }
                 });
             }
 
@@ -210,11 +220,18 @@ define([
 
                                 var keys = _.keys(split_obj);
                             var splitItem = _.object(keys, _.map(keys, function(axis){
-                                return {
-                                            label: labels[axis],
-                                            low: format(split_obj[axis].low),
-                                            high: format(split_obj[axis].high)
-                                };
+                                if ( _.isFinite(axis.low) ) {
+                                    return {
+                                                label: labels[axis],
+                                                low: format(split_obj[axis].low),
+                                                high: format(split_obj[axis].high)
+                                    };
+                                } else {
+                                    return {
+                                        label: labels[axis],
+                                        values: split_obj[axis].values
+                                    };
+                                }
                             }));
                                    filterData(split_obj);
                                    refreshDisplays();

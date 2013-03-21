@@ -8,7 +8,7 @@ require.config({
   "paths": {
       "jQuery": "../components/jquery/jquery",
       "jQuery-ui": "../components/jquery-ui/ui/jquery-ui.custom",
-      "bootstrap": "vendor/bootstrap/bootstrap",
+      "bootstrap": "vendor/bootstrap",
       "backbone": "../components/backbone/backbone",
       "d3": "../components/d3/d3",
       "modernizr": "../components/modernizr",
@@ -19,7 +19,7 @@ require.config({
       'handlebars' : '../components/require-handlebars-plugin/Handlebars',
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
       'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
-      'crossfilter' : '../components/crossfilter/crossfilter'
+      'crossfilter' : 'vendor/crossfilter' //need the newer crossfilter and can't use bower yet
   },
   "shim": {
       "backbone": {

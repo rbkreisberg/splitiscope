@@ -2,13 +2,31 @@
        <i class="icon-resize-vertical icon-large pull-left"></i> 
        <div>
        {{#with splitItem}}
-       {{#if x}}
-          {{x.label}}: {{x.low}} - {{x.high}}
-          <br/>
-       {{/if}}
-       {{#if y}}
-          {{y.label}}: {{y.low}} - {{y.high}}
-        {{/if}}
+         {{#if x}}
+          {{#with x}}
+          {{#if low}}
+            {{label}}: {{low}} - {{high}}
+          {{else}}
+          {{label}}:
+            {{#each values}}
+              {{this}}
+            {{/each}}
+          {{/if}}
+          {{/with}}
+            <br/>
+         {{/if}}
+         {{#if y}}
+          {{#with y}}
+          {{#if low}}
+            {{label}}: {{low}} - {{high}}
+          {{else}}
+          {{label}}:
+            {{#each values}}
+              {{this}}
+            {{/each}}
+          {{/if}}
+          {{/with}}
+          {{/if}}
         {{/with}}
       </div>
 </li>

@@ -35,8 +35,10 @@ var __ = {
     margin : {top:15, bottom: 15, left:30, right: 10},
     colorLabel  : 'label',
     radius : 4,
-    xDataType : 'numerical',
-    yDataType : 'numerical',
+    dataType : { 
+                 x : 'numerical',
+                 y : 'numerical'
+               },
     data : {x:[],y:[], label:[] },
     splits : {},
     categoryColor : null
@@ -174,7 +176,7 @@ splitiscope.render = function() {
 
 function drawSplitLabel() {
 
-  if (bottom_surface.select('.split_labels')[0] !== null) { return; }
+  if (bottom_surface.select('.split_labels').node() !== null) { return; }
     var split_labels = bottom_surface.append('g')
                           .attr('class','split_labels');
     split_labels.append('text')
@@ -303,8 +305,10 @@ function clearSplitPointer(axis) {
 }
 
 function drawXSplits() {
-
-  if ( __.xDataType === 'numerical' ) { drawNumericalXSplits(); }
+  if ( _.isNull(split_surface.select('.split_labels').node() ) ) {
+      split_surface.append('g').attr('class','x split_group');
+  }
+  if ( __.dataType.x === 'numerical' ) { drawNumericalXSplits(); }
   else { drawOrdinalXSplits(); }
 
 }
@@ -312,18 +316,18 @@ function drawXSplits() {
 function drawOrdinalXSplits () {
 
   var axis = 'x',
-   xsplits = split_surface.append('g').attr('class','x split_group');
+   xsplits = split_surface.select('.x.split_group');
 
   var xDomain = scales.x.domain(),
       xExtent = scales.x.range(),
          band = ((scales.x.rangeExtent()[1] - scales.x.rangeExtent()[0]) / xExtent.length) - 10;
 
-  var splits = splits.selectAll('rect')
+  var splits = xsplits.selectAll('rect')
             .data( xDomain, String );
 
       splits.enter()
            .append('rect')     
-              .attr('transform',function(d) { return 'translate(' + scales.x(d) - band/2 + ',0)'; } )
+              .attr('transform',function(d) { return 'translate(' + (scales.x(d) - band/2) + ',0)'; } )
               .attr('x', 0)
               .attr('width', band)
               .attr('y', -1 * padding.top)
@@ -347,14 +351,20 @@ function drawOrdinalXSplits () {
               });
 
     splits.transition()
-                  .duration(update_duration)
-                  .attr('transform',function(d) { return 'translate(' + scales.x(d) - band/2 + ',0)'; } );
+              .duration(update_duration)
+              .attr('transform',function(d) { return 'translate(' + (scales.x(d) - band/2) + ',0)'; } )
+              .attr('width', band);
+
+    splits.exit().transition()
+          .duration(update_duration)
+          .style('fill-opacity',0)
+          .remove();
 }
 
 function drawNumericalXSplits () {
 
     var axis = 'x',
-       xsplits = split_surface.append('g').attr('class','x split_group');
+       xsplits = split_surface.select('.x.split_group');
 
     var xExtent = scales.x.range();
     
@@ -405,15 +415,17 @@ function styleSplitSelector( split_selector, axis ) {
 }
 
 function drawYSplits() {
-
-  if ( __.yDataType === 'numerical' ) { drawNumericalYSplits(); }
+if ( _.isNull(split_surface.select('.split_labels').node() ) ) {
+      split_surface.append('g').attr('class','y split_group');
+  }
+  if ( __.dataType.y === 'numerical' ) { drawNumericalYSplits(); }
   else { drawOrdinalYSplits(); }
   
 }
 
 function drawOrdinalYSplits() {
 
-  var ysplits = split_surface.append('g').attr('class','y split_group');
+  var ysplits = split_surface.select('.y.split_group');
 
   var yDomain = scales.y.domain(),
       yExtent = scales.y.range(),
@@ -449,12 +461,18 @@ function drawOrdinalYSplits() {
 
       splits.transition()
               .duration(update_duration)
-              .attr('transform', function(d) { return 'translate(0,' + ( scales.y(d) - band/2 ) + ')'; } );
+              .attr('transform', function(d) { return 'translate(0,' + ( scales.y(d) - band/2 ) + ')'; } )
+              .attr('height', band);
+
+      splits.exit().transition()
+          .duration(update_duration)
+          .style('fill-opacity',0)
+          .remove();
 }
 
 function drawNumericalYSplits() {
 
-    var ysplits = split_surface.append('g').attr('class','y split_group');
+    var ysplits = split_surface.select('.y.split_group');
 
     var yExtent = scales.y.range();
      
@@ -560,12 +578,29 @@ function drawNumericalYSplits() {
                         d3.select(this).style('stroke','none');
                       })
                       .on('click',function(dims){
-                        var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
-                        var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
-                      
                         var split_obj = {};
-                        if (!_.isNull(split_data['x'].span)) split_obj.x = _.clone(x);
-                        if (!_.isNull(split_data['y'].span)) split_obj.y = _.clone(y);
+                        if ( !_.isNull(split_data['x'].span) ) {
+                          split_obj.x = {};
+                          if ( __.dataType.x === 'numerical' ) {
+                            var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
+                            split_obj.x = _.clone(x);
+                          } else {
+                            var xExtent = scales.x.range(),
+                                xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[2]; } );
+                            split_obj.x = { values: _.map(xSelectedVals, scales.x.invert) };
+                          }
+                        }
+                        if (!_.isNull(split_data['y'].span)) {
+                          split_obj.y = {};
+                          if ( __.dataType.y === 'numerical' ) {
+                            var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
+                            split_obj.y = _.clone(y);
+                          } else {
+                            var yExtent = scales.y.range(),
+                                ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[3];} );
+                            split_obj.y = { values : _.map(ySelectedVals, scales.y.invert) };
+                          }
+                        }
                         events.partition( split_obj );
                       });              
 
@@ -625,11 +660,13 @@ function drawNumericalYSplits() {
 
   function selectCategoricalSplitValue(value, axis) {
     if (!_.contains(selected[axis], value)) selected[axis].push(value);
-    var remaining_values = _.difference( scales.y.domain(), selected[axis] );
-    var domain = _.union(selected[axis],remaining_values);
+    var remaining_values = _.difference( scales.y.domain(), selected[axis] ),
+        domain = _.union(selected[axis],remaining_values),
+        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
+
     scales[axis].domain(domain);
-    var band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
-    split_data[axis].span  = scales[axis](value) - band/2;
+    
+    split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1));
     drawData();
     updateAxes();
     drawSplits();
@@ -645,9 +682,9 @@ function drawNumericalYSplits() {
         domain = len ? _.union(selected[axis],remaining_values) : remaining_values,
         band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
     
-    split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - band/2 : 0;
-
     scales[axis].domain(domain);
+
+    split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
         
     drawData();
     updateAxes();
@@ -657,7 +694,7 @@ function drawNumericalYSplits() {
 
   function clearAllSplitSelections() {
     _.each(['x','y'], function(axis) {
-      selected[axis] = null;
+      selected[axis] = __.dataType[axis] === 'numerical' ? null : [];
       clearSplitSelection(axis)
       });
   }
@@ -691,8 +728,8 @@ function drawNumericalYSplits() {
     if ( _.contains(element_properties, 'x') && _.contains(element_properties, 'y') ) {
       var xVals = _.uniq(_.pluck(__.data, 'x' ) ),
           yVals = _.uniq(_.pluck(__.data, 'y' ) );
-      __.xDataType =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
-      __.yDataType =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
+      __.dataType.x =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
+      __.dataType.y =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
     }
     else {
       console.error('x or y coordinates not packaged in data');
@@ -711,7 +748,7 @@ function drawNumericalYSplits() {
     var colorLabels = _.pluck( data_array, __.colorLabel ),
         splits_on_x = _.pluck( data_array, 'splits_on_x' );
 
-    if ( __.xDataType === "ordinal" ) {
+    if ( __.dataType.x === "ordinal" ) {
       scales.x = d3.scale.ordinal().domain(xVals.sort()).rangePoints([10,plotWidth()-10],1.0);
       scales.x.invert = d3.scale.ordinal().domain(scales.x.range()).range(xVals);
 
@@ -721,7 +758,7 @@ function drawNumericalYSplits() {
       scales.x =d3.scale.linear().domain(d3.extent(xVals)).range([10,plotWidth()-10]);
    }
                      
-    if ( __.yDataType === "ordinal" ) {
+    if ( __.dataType.y === "ordinal" ) {
       scales.y = d3.scale.ordinal().domain(yVals.sort(d3.descending)).rangePoints([plotHeight()-10,10],1.0);
       scales.y.invert = d3.scale.ordinal().domain(scales.y.range()).range(yVals);
       
