@@ -78,8 +78,8 @@ var __ = {
       colorCategories,
       strokeFunction = function(index) { return splitStrokeColors[index];},
       data_array = [],
-      yaxis = d3.svg.axis().orient("right").ticks(5).tickSize(-1*plotWidth() + 10,4,4),
-      xaxis = d3.svg.axis().orient("bottom").ticks(5),
+      yaxis = d3.svg.axis().orient("right"),
+      xaxis = d3.svg.axis().orient("bottom"),
       update_duration = 300,
       bottom_surface, split_surface, data_surface, partition_surface; // groups for axes, brushes
 
@@ -132,6 +132,8 @@ var __ = {
 
     data_surface = top_surface.append('g')
                     .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
+    data_surface.append('g').attr('class','data');
+    data_surface.append('g').attr('class','data_labels');
 
             return splitiscope;
   };
@@ -215,7 +217,7 @@ function updateAxes() {
   x_axis.transition().duration(update_duration).call(xaxis.scale(scales.x));
 }
 
-  function drawAxes() {
+function drawAxes() {
     var y_axis = bottom_surface.select('.y.axis'), 
         x_axis = bottom_surface.select('.x.axis');
 
@@ -240,101 +242,162 @@ function updateAxes() {
     .text('X Label');
   }
 
-  function drawData() {
+function drawData() {
 
-     var data_points = data_surface
-                          .selectAll('.data_point')
-                          .data(data_array, function(d) { return d['id']; } );
+  var data_points = data_surface.select('.data')
+    .selectAll('.data_point')
+    .data(data_array, function(d) { return d['id']; } );
 
-                        data_points.transition()
-                            .duration(update_duration)
-                            .attr('transform', function(point) { return 'translate(' + scales.x(point.x) + ',' +
-                            scales.y(point.y) + ')';})
-                          .attr('d',symbolFunction(0).size(symbolSize)())
-                          .style('fill-opacity', function(point) {
-                              return _.isUndefined(point.splits_on_x) ? 1.0 : caseSplitsOpacityscale(point.splits_on_x);
-                          });  
+    data_points.enter()
+    .append('path')
+      .attr('class','data_point');
 
-                        data_points.exit()
-                          .transition()
-                          .duration(update_duration)
-                          .style('fill-opacity',0)
-                          .remove();
+  data_points
+        .attr('d',symbolFunction(0).size(symbolSize)())
+        .style('fill',function(point) {
+                              return __.categoryColor(point[__.colorLabel]);
+       })
+        .style('stroke-width',2.0)      
+        .style('stroke',function(point) {
+                              return __.categoryColor(point[__.colorLabel]);
+       })
+  .transition()
+      .duration(update_duration)
 
-                        data_points.enter()
-                        .append('path')
-                          .attr('class','data_point')
-                          .attr('transform', function(point) { return 'translate(' + scales.x(point.x) + ',' +
-                            scales.y(point.y) + ')';})
-                          .attr('d',symbolFunction(0).size(symbolSize)())
-                          .style('fill',function(point) {
-                                                  return __.categoryColor(point[__.colorLabel]);
-                          })
-                          .style('fill-opacity',0)
-                          .style('stroke-width',0.0)
-                          .style('stroke',function(point) {
-                                                  return __.categoryColor(point[__.colorLabel]);
-                          })
-                        .transition()
-                          .duration(update_duration)
-                          .style('fill-opacity', function(point) {
-                              return _.isUndefined(point.splits_on_x) ? 1.0 : caseSplitsOpacityscale(point.splits_on_x);
-                          });  
+      .attr('transform', function(point) { 
+          return 'translate(' + scales.x(point.x) + ',' +
+          scales.y(point.y) + ')';})
+      
+      .style('fill-opacity', function(point) {
+          return _.isUndefined(point.splits_on_x) ? 
+            1.0 : caseSplitsOpacityscale(point.splits_on_x);
+      });
+
+  data_points.exit()
+      .transition()
+      .duration(update_duration)
+      .style('fill-opacity',0)
+      .remove();
 
       if (__.dataType['x'] !== 'numerical' && __.dataType['y'] !== 'numerical') {
 
-            var xInversed = {}; 
-            _.each( scales.x.domain(), function(label, index) {
-              xInversed[label] = index;
-            });
-            var yInversed = {}; 
-            _.each( scales.y.domain(), function(label, index) {
-              yInversed[label] = index;
-            });
+          var xInversed = {}; 
+          _.each( scales.x.domain(), function(label, index) {
+            xInversed[label] = index;
+          });
+          var yInversed = {}; 
+          _.each( scales.y.domain(), function(label, index) {
+            yInversed[label] = index;
+          });
 
-            var totalWidth = colorCategories.length * 15;
+          var totalWidth = colorCategories.length * 15;
 
-            var d = {}; 
-                  _.each(scales.x.domain(), function(label) { 
-                    d[label] = {};
-                    _.each(scales.y.domain(), function(ylabel) {
-                      d[label][ylabel] = {};
-                      _.each(colorCategories, function(cat) {
-                        d[label][ylabel][cat] = 0;
-                      });
+          var d = {}; 
+                _.each(scales.x.domain(), function(label) { 
+                  d[label] = {};
+                  _.each(scales.y.domain(), function(ylabel) {
+                    d[label][ylabel] = {};
+                    _.each(colorCategories, function(cat) {
+                      d[label][ylabel][cat] = 0;
                     });
                   });
+                });
 
-            var e = Array.apply(null, new Array((scales.y.domain().length))).map(function() { return 0;});
+          var stacks = scales.x.domain().length * scales.y.domain().length * colorCategories.length;
+          var e = Array.apply(null, new Array((scales.y.domain().length))).map(function() { return 0;});
+          var f = new Array(stacks);
 
-            _.each(data_array, function(point, index) {
+          _.each(data_array, function(point, index) {
                  e[ index ] = d[ point['x'] ] [  point['y'] ] [ point[__.colorLabel] ]++;
+          });
+
+          var i = stacks -1;
+
+          _.each(_.keys(d), function (k1) { 
+              _.each(_.keys(d[k1]), function(k2) { 
+                  _.each(_.keys(d[k1][k2]), function(k3) {
+                          f[i--] = [k1, k2, k3, d[k1][k2][k3]];
+                  });
+                });
             });
 
-          var axis = 'y',
-             extent = scales[axis].range(),
-             band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length) - 10;
+          var height_axis = 'y',
+            extent = scales[height_axis].range(),
+              band = ((scales[height_axis].rangeExtent()[1] - scales[height_axis].rangeExtent()[0]) / extent.length);
+
+          var width_axis = 'x',
+            width_extent = scales[width_axis].range(),
+             width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
            
-           var barHeight = 2,
-               barWidth = 10;
+          var barHeight = Math.floor( (band - 25) / ( d3.max(e) ) ),
+              halfBarHeight = barHeight / 2,
+              barWidth = Math.floor( ( width_band /2) / colorCategories.length),
+              halfBarWidth = barWidth / 2,
+              barSpacing = barWidth/2;
 
-            var iw = {},
-              wiggle = _.map(colorCategories, function(label, i) { iw[label] = i; return i*15 - (totalWidth /2); });
+          function category_offset (label) {
+            var last_index = colorCategories.length -1,
+                position = colorCategories.indexOf( label ),
+                  midpoint = last_index / 2;
+            var offset = (position  - midpoint) * (barWidth + (barSpacing * last_index));
+            return Math.round(offset);
+          } 
 
-            data_points.transition()
+          data_points
+                      .transition()
                       .duration(update_duration)
-                      .style('fill-opacity',1)
-                      .attr('d', 'M 0 0 L '+ barWidth +' 0 L ' + barWidth +' -' + barHeight + ' L 0 -' + barHeight + ' L 0 0')
-                      .style('stroke-width',1)
-                      .attr('transform', function(point, i) { 
-                                                                  return 'translate(' + 
-                                                                        (scales.x(point.x) + wiggle[ iw[ point[ __.colorLabel ] ] ]) + 
-                                                                          ',' +
-                                                                        (scales.y(point.y) + band/2 - (e[i]*barHeight)) +
-                                                                         ')';
+                      .style('fill-opacity', 1)
+                      .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
+                              halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
+                              barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
+                      
+                      .style('stroke-width',"2px")
+                      .style('stroke-opacity',1.0)
+                      .attr('transform', 
+                        function(point, i) { 
+                            return 'translate(' + 
+                                  (scales.x(point.x) + category_offset(point[__.colorLabel]) ) +
+                                    ',' +
+                                  (scales.y(point.y) + band/2 - (e[i]*barHeight)) + ')';
                       });
 
-      }
+          function text_transform(point) {
+                          return 'translate(' + 
+                                  (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
+                                    ',' +
+                                  (scales.y(point[1]) + band/2 - ((point[3]+1)*barHeight)) + ')';
+          }
+
+          var data_text = data_surface.select('.data_labels')
+                      .selectAll('.data_totals')
+                      .data(f, String );
+                      
+              data_text.enter()
+                        .append("text")
+                        .attr('class','data_totals')
+                        .text(function(point,i){ return point[3];})
+                        .attr('transform', function(point) {
+                              return 'translate(' + 
+                                  (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
+                                    ',' +
+                                  scales.y(point[1]) + ')';});
+
+              data_text.transition()
+                        .duration(update_duration)
+                        .attr('transform', text_transform );
+
+              data_text.exit().remove();
+
+
+      } else {
+
+        var data_text = data_surface.select('.data_labels')
+                      .selectAll('.data_totals')
+                      .data([], String );
+
+      data_text.exit().remove();
+
+    }
 
   }
 
@@ -500,158 +563,159 @@ function drawNumericalAxisSplits ( axis ) {
               
   }
 
-  function appendNumericalSplitPointer(selection, axis, position) {
-    if (axis ==='x') {
-     selection.append('path')
-                        .attr('class',axis + ' split_pointer')
-                        .attr('transform','translate('+position+',0)')
-                        .attr('d',function(d,i) {
-                          return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
-                          })
-                        .style('stroke', '#cc6432')
-                        .style('stroke-width',4.0)
-                        .style('fill','#cc6432');
-    } else {
-        selection.append('path')
-                        .attr('class','y split_pointer')
-                        .attr('transform','translate(0,'+position+')')
-                        .attr('d',function(d,i) {
-                          return "M" + "-" + padding.left + ",0h"+ padding.left;
-                          })
-                        .style('stroke', '#cc6432')
-                        .style('stroke-width',4.0)
-                        .style('fill','#cc6432');
+function appendNumericalSplitPointer(selection, axis, position) {
+  if (axis ==='x') {
+   selection.append('path')
+                      .attr('class',axis + ' split_pointer')
+                      .attr('transform','translate('+position+',0)')
+                      .attr('d',function(d,i) {
+                        return "M" + 0 + ",-" +padding.top + "v"+ padding.top;
+                        })
+                      .style('stroke', '#cc6432')
+                      .style('stroke-width',4.0)
+                      .style('fill','#cc6432');
+   } else {
+      selection.append('path')
+                      .attr('class','y split_pointer')
+                      .attr('transform','translate(0,'+position+')')
+                      .attr('d',function(d,i) {
+                        return "M" + "-" + padding.left + ",0h"+ padding.left;
+                        })
+                      .style('stroke', '#cc6432')
+                      .style('stroke-width',4.0)
+                      .style('fill','#cc6432');
+   }
+
+  }
+
+function drawPartitionSpans() {
+
+    var pad = 10;
+    var double_pad = pad *2;
+
+    var partition_splits = [
+                            [ 
+                              pad, 
+                              pad, 
+                              split_data['x'].span ? split_data['x'].span - pad : displayWidth() + pad, 
+                              split_data['y'].span ? split_data['y'].span - pad : displayHeight()
+                            ],
+                            [ 
+                              split_data['x'].span ? split_data['x'].span : displayWidth(), 
+                              pad, 
+                              split_data['x'].span ? displayWidth() - split_data['x'].span + double_pad : 0, 
+                              split_data['y'].span ? split_data['y'].span - pad : displayHeight()
+                            ],
+                            [ 
+                              pad,
+                              split_data['y'].span ? split_data['y'].span : displayHeight(), 
+                              split_data['x'].span ? split_data['x'].span - pad : displayWidth() + pad, 
+                              split_data['y'].span ? displayHeight() - split_data['y'].span + pad : 0,
+                            ],
+                            [ 
+                              split_data['x'].span ? split_data['x'].span : displayWidth(), 
+                              split_data['y'].span ? split_data['y'].span : displayHeight(), 
+                              split_data['x'].span ? displayWidth() - split_data['x'].span + double_pad : 0,
+                              split_data['y'].span ? displayHeight() - split_data['y'].span + pad : 0
+                            ]
+                          ];
+
+    if (_.isNull(split_data['x'].span) && _.isNull(split_data['y'].span)) {
+      partition_splits = [];
     }
 
-  }
+    var partitions = partition_surface.selectAll('.partition')
+                    .data(partition_splits);
+        
+              partitions
+                  .enter()
+                  .append('rect')
+                  .attr('class','partition')
+                   .attr('x',function(val) {return val[0];})
+                    .attr('y',function(val) {return val[1];})
+                    .attr('width', function(val) {return val[2];})
+                    .attr('height',function(val) {return val[3];})
+                    .style('fill',function(d,i) { return __.partitionColors[i]})
+                    .style('fill-opacity',0.3)
+                    .style('stroke','none')
+                    .style('stroke-opacity','0.6')
+                    .style('stroke-width',4.0)
+                    .on('mouseover', function() {
+                      d3.selectAll('.partition').style('stroke','none');
+                      d3.select(this).style('stroke','#22D');
+                    })
+                    .on('mouseout', function() {
+                      var el = d3.event.relatedTarget;
+                      if (d3.select(el).classed('data_point') || el.nodeName == 'line') { return; }
+                      d3.select(this).style('stroke','none');
+                    })
+                    .on('click',function(dims){
+                      var split_obj = {};
+                      if ( !_.isNull(split_data['x'].span) ) {
+                        split_obj.x = {};
+                        if ( __.dataType.x === 'numerical' ) {
+                          var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
+                          split_obj.x = _.clone(x);
+                        } else {
+                          var xExtent = scales.x.range(),
+                              xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[0] + dims[2]; } );
+                          split_obj.x = { values: _.map(xSelectedVals, scales.x.invert) };
+                        }
+                      }
+                      if (!_.isNull(split_data['y'].span)) {
+                        split_obj.y = {};
+                        if ( __.dataType.y === 'numerical' ) {
+                          var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
+                          split_obj.y = _.clone(y);
+                        } else {
+                          var yExtent = scales.y.range(),
+                              ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[1] + dims[3];} );
+                          split_obj.y = { values : _.map(ySelectedVals, scales.y.invert) };
+                        }
+                      }
+                      events.partition( split_obj );
+                    });              
 
-  function drawPartitionSpans() {
-
-      var pad = 10;
-      var double_pad = pad *2;
-
-      var partition_splits = [
-                              [ 
-                                pad, 
-                                pad, 
-                                split_data['x'].span ? split_data['x'].span - pad : displayWidth() + pad, 
-                                split_data['y'].span ? split_data['y'].span - pad : displayHeight()
-                              ],
-                              [ 
-                                split_data['x'].span ? split_data['x'].span : displayWidth(), 
-                                pad, 
-                                split_data['x'].span ? displayWidth() - split_data['x'].span + double_pad : 0, 
-                                split_data['y'].span ? split_data['y'].span - pad : displayHeight()
-                              ],
-                              [ 
-                                pad,
-                                split_data['y'].span ? split_data['y'].span : displayHeight(), 
-                                split_data['x'].span ? split_data['x'].span - pad : displayWidth() + pad, 
-                                split_data['y'].span ? displayHeight() - split_data['y'].span + pad : 0,
-                              ],
-                              [ 
-                                split_data['x'].span ? split_data['x'].span : displayWidth(), 
-                                split_data['y'].span ? split_data['y'].span : displayHeight(), 
-                                split_data['x'].span ? displayWidth() - split_data['x'].span + double_pad : 0,
-                                split_data['y'].span ? displayHeight() - split_data['y'].span + pad : 0
-                              ]
-                            ];
-      if (_.isNull(split_data['x'].span) && _.isNull(split_data['y'].span)) {
-        partition_splits = [];
-      }
-
-      var partitions = partition_surface.selectAll('.partition')
-                      .data(partition_splits);
-          
                 partitions
-                    .enter()
-                    .append('rect')
-                    .attr('class','partition')
-                     .attr('x',function(val) {return val[0];})
-                      .attr('y',function(val) {return val[1];})
-                      .attr('width', function(val) {return val[2];})
-                      .attr('height',function(val) {return val[3];})
-                      .style('fill',function(d,i) { return __.partitionColors[i]})
-                      .style('fill-opacity',0.3)
-                      .style('stroke','none')
-                      .style('stroke-opacity','0.6')
-                      .style('stroke-width',4.0)
-                      .on('mouseover', function() {
-                        d3.selectAll('.partition').style('stroke','none');
-                        d3.select(this).style('stroke','#22D');
-                      })
-                      .on('mouseout', function() {
-                        var el = d3.event.relatedTarget;
-                        if (d3.select(el).classed('data_point') || el.nodeName == 'line') { return; }
-                        d3.select(this).style('stroke','none');
-                      })
-                      .on('click',function(dims){
-                        var split_obj = {};
-                        if ( !_.isNull(split_data['x'].span) ) {
-                          split_obj.x = {};
-                          if ( __.dataType.x === 'numerical' ) {
-                            var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
-                            split_obj.x = _.clone(x);
-                          } else {
-                            var xExtent = scales.x.range(),
-                                xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[0] + dims[2]; } );
-                            split_obj.x = { values: _.map(xSelectedVals, scales.x.invert) };
-                          }
-                        }
-                        if (!_.isNull(split_data['y'].span)) {
-                          split_obj.y = {};
-                          if ( __.dataType.y === 'numerical' ) {
-                            var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
-                            split_obj.y = _.clone(y);
-                          } else {
-                            var yExtent = scales.y.range(),
-                                ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[1] + dims[3];} );
-                            split_obj.y = { values : _.map(ySelectedVals, scales.y.invert) };
-                          }
-                        }
-                        events.partition( split_obj );
-                      });              
+                    .attr('x',function(val) {return val[0];})
+                    .attr('y',function(val) {return val[1];})
+                    .attr('width', function(val) {return val[2];})
+                    .attr('height',function(val) {return val[3];});
 
-                  partitions
-                      .attr('x',function(val) {return val[0];})
-                      .attr('y',function(val) {return val[1];})
-                      .attr('width', function(val) {return val[2];})
-                      .attr('height',function(val) {return val[3];});
-
-                  partitions.exit()
-                      .transition()
-                      .duration(100)
-                      .attr('fill-opacity',0)
-                      .remove();
+                partitions.exit()
+                    .transition()
+                    .duration(100)
+                    .attr('fill-opacity',0)
+                    .remove();
 
   }
 
-  function clearPartitionSpans() {
-     var partitions = partition_surface.selectAll('.partition');
-     
-     partitions.transition()
-                .duration(update_duration)
-                .style('fill-opacity',0.0)
-                .style('stroke-opacity',0.0)
-                .remove();
+function clearPartitionSpans() {
+   var partitions = partition_surface.selectAll('.partition');
+   
+   partitions.transition()
+              .duration(update_duration)
+              .style('fill-opacity',0.0)
+              .style('stroke-opacity',0.0)
+              .remove();
   }
 
-  function mousemove_fn(axis) {
+function mousemove_fn(axis) {
     return function(){ 
                 var position = d3.mouse(this)[axis === 'x' ? 0 : 1];
                 if (selected[axis] === null) selectSplitValue(position, axis);            
-  } ;
+    };
   }
 
-  function mouseover_fn(el,index, axis) {
-               if (selected[axis] === index) {
-                            selected[axis] = null;
-                            clearSplitSelection(axis);
-                            return;
-                          }
-                          selected[axis] = index;
-                          makeSplitSelection(el,selected[axis],axis);
-                          return;
+function mouseover_fn(el,index, axis) {
+   if (selected[axis] === index) {
+                selected[axis] = null;
+                clearSplitSelection(axis);
+                return;
+              }
+              selected[axis] = index;
+              makeSplitSelection(el,selected[axis],axis);
+              return;
   }
  
   function makeSplitSelection(el, index, axis){
@@ -676,8 +740,8 @@ function drawNumericalAxisSplits ( axis ) {
     scales[axis].invert.range(domain);
     
     split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1));
-    drawData();
     updateAxes();
+    drawData();
     drawSplits();
     drawPartitionSpans();
   }
@@ -696,8 +760,8 @@ function drawNumericalAxisSplits ( axis ) {
 
     split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
         
-    drawData();
     updateAxes();
+    drawData();
     drawSplits();
     drawPartitionSpans();
   }
@@ -766,7 +830,7 @@ function drawNumericalAxisSplits ( axis ) {
       selected.x = [];
     } 
     else { 
-      scales.x =d3.scale.linear().domain(d3.extent(xVals)).range([10,plotWidth()-10]);
+      scales.x =d3.scale.linear().domain(d3.extent(xVals)).rangeRound([10,plotWidth()-10]);
    }
                      
     if ( __.dataType.y === "ordinal" ) {
@@ -776,12 +840,13 @@ function drawNumericalAxisSplits ( axis ) {
       selected.y = [];
     }
     else { 
-      scales.y = d3.scale.linear().domain(d3.extent(yVals)).range([plotHeight()-10,10]);
+      scales.y = d3.scale.linear().domain(d3.extent(yVals)).rangeRound([plotHeight()-10,10]);
      }
 
-      colorCategories = _.uniq(colorLabels)
-    var numberOfCategories = colorCategories.length;
-    var colorArray = _.first(__.pointColors,numberOfCategories);
+    colorCategories = _.uniq(colorLabels).sort();
+
+    var numberOfCategories = colorCategories.length,
+        colorArray = _.first(__.pointColors,numberOfCategories);
 
     __.categoryColor = d3.scale.ordinal().domain(colorLabels).range(colorArray);
     caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
@@ -789,61 +854,64 @@ function drawNumericalAxisSplits ( axis ) {
     return setAxes();
   }
 
-  function parseSplits() {
-    var split_bin_start, split_bin_number, split_bin_end, s;
+function parseSplits() {
+  var split_bin_start, split_bin_number, split_bin_end, s;
 
-    _.each(['x','y'], function (axis){
+  _.each(['x','y'], function (axis){
 
-      if (__.splits[axis] !== undefined) {
+    if (__.splits[axis] !== undefined) {
 
-       s = split_data[axis].data_array = __.splits[axis].bins;
-        
-        if(s.length < 1 || s[0] === undefined || s[0].length < 1) {
-          console.error('invalid split bins in axis: ' + axis);
-          return;
-        }
-
-        split_bin_number = split_data[axis].data_array.length;
-        split_bin_start = __.splits[axis].low+(.5*__.splits[axis].binsize);
-        split_bin_end = split_bin_start + ((split_bin_number-1)*__.splits[axis].binsize);
-
-        var bin_positions = _.map(s, function(d,i) { return split_bin_start + (__.splits[axis].binsize * i); });
-        var range = scales[axis].domain(), min = range[0], max = range[1];
-        s= [];
-        var idx = 0, bin_p = [];
-
-         _.each(bin_positions, function(val, index) { 
-                        if (val >= min && val <= max) {
-                          bin_p[idx] = val;
-                          s[idx] = split_data[axis].data_array[index];
-                          idx++;
-                        } 
-        });
-
-        split_bin_number = bin_p.length;
-        split_bin_start = bin_p[0];
-        split_bin_end = bin_p[split_bin_number-1];
-
-        split_data[axis].data_array = split_bin_number > 0 ? s : undefined;
-
-        split_data[axis].vis = {
-                                attr : axis === 'x' ? 'd' : 'stroke',
-                                fn: axis === 'x' ? symbolFunction : strokeFunction,
-                                default: axis === 'x' ? symbolFunction(0)() : 'transparent',
-                              };
-
-        if (!_.isUndefined(split_data[axis].data_array)) setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end);
+     s = split_data[axis].data_array = __.splits[axis].bins;
+      
+      if(s.length < 1 || s[0] === undefined || s[0].length < 1) {
+        console.error('invalid split bins in axis: ' + axis);
+        return;
       }
 
-  });
+      split_bin_number = split_data[axis].data_array.length;
+      split_bin_start = __.splits[axis].low+(.5*__.splits[axis].binsize);
+      split_bin_end = split_bin_start + ((split_bin_number-1)*__.splits[axis].binsize);
 
-  }
+      var bin_positions = _.map(s, function(d,i) { 
+        return split_bin_start + (__.splits[axis].binsize * i); 
+      });
+
+      var range = scales[axis].domain(), min = range[0], max = range[1];
+      s= [];
+      var idx = 0, bin_p = [];
+
+       _.each(bin_positions, function(val, index) { 
+          if (val >= min && val <= max) {
+            bin_p[idx] = val;
+            s[idx] = split_data[axis].data_array[index];
+            idx++;
+          } 
+      });
+
+      split_bin_number = bin_p.length;
+      split_bin_start = bin_p[0];
+      split_bin_end = bin_p[split_bin_number-1];
+
+      split_data[axis].data_array = split_bin_number > 0 ? s : undefined;
+
+      split_data[axis].vis = {
+          attr : axis === 'x' ? 'd' : 'stroke',
+          fn: axis === 'x' ? symbolFunction : strokeFunction,
+          default: axis === 'x' ? symbolFunction(0)() : 'transparent',
+      };
+
+      if (!_.isUndefined(split_data[axis].data_array)) setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end);
+    }
+
+});
+
+}
 
   function setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end) {
     var data = split_data[axis].data_array;
-    split_data[axis].opacityScale = d3.scale.linear().domain(d3.extent(data)).range([0.3,0.9]);
+    split_data[axis].opacityScale = d3.scale.linear().domain(d3.extent(data)).rangeRound([0.3,0.9]);
     split_data[axis].colorScale = d3.scale.linear().domain(d3.extent(data)).range(['#FFEDA0','#F03B20']);
-    split_data[axis].binScale = d3.scale.linear().domain([0,split_bin_number-1]).range([scales[axis](split_bin_start), scales[axis](split_bin_end)]);
+    split_data[axis].binScale = d3.scale.linear().domain([0,split_bin_number-1]).rangeRound([scales[axis](split_bin_start), scales[axis](split_bin_end)]);
 
     return splitiscope;
   }
