@@ -1,5 +1,7 @@
 require.config({
 
+  baseUrl: 'scripts',
+
   deps: [
     // 'hbs', /* need Handlebars loader */
     "main" /* main.js loads next */
