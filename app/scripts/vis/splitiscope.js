@@ -248,19 +248,29 @@ function drawData() {
     .selectAll('.data_point')
     .data(data_array, function(d) { return d['id']; } );
 
-    data_points.enter()
-    .append('path')
-      .attr('class','data_point');
-
-  data_points
-        .attr('d',symbolFunction(0).size(symbolSize)())
-        .style('fill',function(point) {
+  data_points.enter()
+      .append('path')
+      .attr('class','data_point')
+       .style('fill',function(point) {
                               return __.categoryColor(point[__.colorLabel]);
        })
         .style('stroke-width',2.0)      
         .style('stroke',function(point) {
                               return __.categoryColor(point[__.colorLabel]);
-       })
+       });
+
+  data_points.exit()
+      .transition()
+      .duration(update_duration/2)
+      .style('fill-opacity',0)
+      .style('stroke-opacity',0)
+      .remove();
+
+  if (__.dataType['x'] == 'numerical' || __.dataType['y'] == 'numerical') {      
+
+  data_points
+        .attr('d',symbolFunction(0).size(symbolSize)())
+       
   .transition()
       .duration(update_duration)
 
@@ -272,14 +282,14 @@ function drawData() {
           return _.isUndefined(point.splits_on_x) ? 
             1.0 : caseSplitsOpacityscale(point.splits_on_x);
       });
+ 
+   var data_text = data_surface.select('.data_labels')
+                      .selectAll('.data_totals')
+                      .data([], String );
 
-  data_points.exit()
-      .transition()
-      .duration(update_duration)
-      .style('fill-opacity',0)
-      .remove();
+      data_text.exit().remove();
 
-      if (__.dataType['x'] !== 'numerical' && __.dataType['y'] !== 'numerical') {
+  } else if (__.dataType['x'] !== 'numerical' && __.dataType['y'] !== 'numerical') {
 
           var xInversed = {}; 
           _.each( scales.x.domain(), function(label, index) {
@@ -387,15 +397,6 @@ function drawData() {
                         .attr('transform', text_transform );
 
               data_text.exit().remove();
-
-
-      } else {
-
-        var data_text = data_surface.select('.data_labels')
-                      .selectAll('.data_totals')
-                      .data([], String );
-
-      data_text.exit().remove();
 
     }
 
