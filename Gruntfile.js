@@ -23,6 +23,7 @@ module.exports = function (grunt) {
 
     grunt.initConfig({
         yeoman: yeomanConfig,
+        proxyConfig: grunt.file.readJSON('proxy.json'),
         watch: {
             coffee: {
                 files: ['<%= yeoman.app %>/scripts/{,*/}*.coffee'],
@@ -95,7 +96,7 @@ module.exports = function (grunt) {
         },
         open: {
             server: {
-                path: 'http://localhost:<%= connect.options.port %>'
+                path: 'http://localhost:<%= proxy.proxy1.options.port %>'
             }
         },
         clean: {
@@ -279,6 +280,14 @@ module.exports = function (grunt) {
             all: {
                 rjsConfig: '<%= yeoman.app %>/scripts/config.js'
             }
+        },
+        proxy : {
+            proxy1 : {
+                options : {
+                    port    : 9001,               // start proxy server, listening to the port 9001
+                    router : '<%= proxyConfig.router %>'
+                }
+            }
         }
     });
 
@@ -295,6 +304,7 @@ module.exports = function (grunt) {
             'handlebars',
             'compass:server',
             //'concat',
+            'proxy',
             'livereload-start',
             'connect:livereload',
             'open',

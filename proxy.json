@@ -1,0 +1,6 @@
+{
+  "router" : {
+     "hostname/query/" : "dataserver:port",
+     "hostname" : "hostname:9000"
+  }
+}
