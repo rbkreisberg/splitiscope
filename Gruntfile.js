@@ -35,7 +35,7 @@ module.exports = function (grunt) {
             },
             compass: {
                 files: ['<%= yeoman.app %>/styles/{,*/}*.{scss,sass}'],
-                tasks: ['compass']
+                tasks: ['compass','concat']
             },
             handlebars: {
                 files: ['<%= yeoman.app %>/scripts/templates/{,*/}*.hbs'],
@@ -177,12 +177,12 @@ module.exports = function (grunt) {
         },
         // not used since Uglify task does concat,
         // but still available if needed
-        // concat: {
-        //     dist: {
-        //         src : ['.tmp/styles/{,*}*.css','<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css'],
-        //         dest : '.tmp/styles/main.css'
-        //     }
-        // },
+        concat: {
+            dist: {
+                src : ['.tmp/styles/main.css','<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css'],
+                dest : '.tmp/styles/main.css'
+            }
+        },
         requirejs: {
             dist: {
                 // Options: https://github.com/jrburke/r.js/blob/master/build/example.build.js
@@ -230,7 +230,7 @@ module.exports = function (grunt) {
                 report: 'min',
                 files: {
                     '<%= yeoman.dist %>/styles/main.css' : [
-                    '.tmp/styles/{,*/}*.css','<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css'
+                    '.tmp/styles/{,*/}*.css'
                     ]                 
                 }
             }
@@ -303,7 +303,7 @@ module.exports = function (grunt) {
             'coffee:dist',
             'handlebars',
             'compass:server',
-            //'concat',
+            'concat',
             'proxy',
             'livereload-start',
             'connect:livereload',
@@ -329,7 +329,7 @@ module.exports = function (grunt) {
         'requirejs',
         'imagemin',
         'htmlmin',
-        //'concat',
+        'concat',
         'cssmin',
         'uglify',
         'copy',

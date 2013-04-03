@@ -80,19 +80,30 @@ define([
         initialize: function(){
             var split_list = '#split_list',
                 split_item = 'li.split_item';
-            
+           
+           var data, data_indices;
 
             var keys, data, data_filter, all, classLabel, classGroup,
                 filter = {  x: null, y: null };
-                 
+
+            function modify_data(axis, arr) {
+                _.each(arr, function(element) {
+                    data[data_indices[element.cName]][axis] = element.fValue;
+                });
+                set_data();
+            }
+
+            function set_cases(c_arr) {
+                data_indices = {};
+                data = new Array(c_arr.length);
+                _.each(c_arr, function(c, index) { 
+                    data_indices[c.cName] = index; 
+                    data[index] = {label: c.cName};
+                });
+            } 
 
             function set_data() {
-                    keys = _.keys(test_data);
-                    
-                    data = _.map(test_data.x, function(value,index) {
-                        return _.object(keys, _.map(keys,function(k) {return test_data[k][index];}));
-                    });
-                    
+                   
                     data_filter = crossfilter(data);
                     all = data_filter.groupAll();
                     filter = {
@@ -100,7 +111,7 @@ define([
                         y: data_filter.dimension(function(d) { return d.y;})
                         };
                     
-                    classLabel = data_filter.dimension(function(d) { return d.label;});
+                    classLabel = data_filter.dimension(function(d) { return d.class;});
                     classGroup = classLabel.group().reduceCount();
             }    
 
@@ -178,21 +189,18 @@ define([
                   }
                 }).disableSelection();
 
-              }
+                queue()
+                .defer(d3.json, '/query/dataset/features')
+                .defer(d3.json, '/query/dataset/cases')
+                .await( function(error, f, c) {
+                    var features = _.pluck(f,"fName");
+                    $("#x_axis_autocomplete, #y_axis_autocomplete").autocomplete({
+                            source: features
+                            });
+                    set_cases(c);
+                });
+            }
             jquery_hooks();
-
-            // queue()
-            //     //.defer(d3.json, 'http://')
-            //     .defer(function() { return true;})
-            //     .await(function(error, data1){
-            //         if (error) { errorMsg(error);}
-                    // var splitiscope = split_vis({
-                    //     radius: 12,
-                    //     margin : {
-                    //                 top: 10, left: 10, bottom: 30, right: 30
-                    //     }
-
-                    // });
 
     function updateSplitsTemplates() {
 
@@ -220,40 +228,38 @@ define([
     }
 
     function refreshDisplays() {
-        if( _.isUndefined(splitiscope) ) return;
+        if (!( data.length && data[0].x && data[0].y)) return;
+
+        if( _.isUndefined(splitiscope)) {
+            plot(data);
+            return;
+        }
         updateSplitiscope();
         updateTotalsTemplates();
     }
 
     function selectElementHooks() {
 
-            $('#y_axis_selector').on('change', function(){
-                if ( $(this).val() ==='0' ) {
-                        test_data.y = numerical_data('y');
-                    } else {
-                        test_data.y = categorical_data('y');
-                    }
-                    set_data();
+            $('#y_axis_autocomplete').on('autocompleteselect', function(e, ui){
+               queue()
+                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+                .await(function(error,f){
+                    modify_data('y',f['caseValues']);
                     refreshDisplays();
+                });
             });
 
-            $('#x_axis_selector').on('change', function(){
-                    if ( $(this).val() ==='0' ) {
-                        test_data.x = numerical_data('x');
-                    } else {
-                        test_data.x = categorical_data('x');
-                    }
-                    set_data();
+           $('#x_axis_autocomplete').on('autocompleteselect', function(e, ui){
+               queue()
+                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+                .await(function(error,f){
+                    modify_data('x',f['caseValues']);
                     refreshDisplays();
+                });
             });
     }
 
     selectElementHooks();
-
-    $('#x_axis_selector').change();
-    $('#y_axis_selector').change();
-
-    set_data();
 
     var splitiscope;
     var plot_container = '#plot';
@@ -292,7 +298,6 @@ define([
                                 });
                             refreshDisplays();
                         };
-                plot(data);
         }
     };
     return Application;

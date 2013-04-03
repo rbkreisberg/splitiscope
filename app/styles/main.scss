@@ -1,7 +1,7 @@
 
 $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
-//@import '../components/sass-bootstrap/lib/responsive';
+@import '../components/sass-bootstrap/lib/responsive';
 @import 'vis';
 
 .hero-unit {
@@ -56,7 +56,7 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 }
 
 #plot {
-  height: (($gridColumnWidth * 8) + ($gridGutterWidth * (8 - 1))) * (3/4);
+  height: (($gridColumnWidth * 10) + ($gridGutterWidth * (10 - 1))) * (3/4);
   width : 100%;
 }
 .splitiscope {
@@ -69,8 +69,18 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
     border: 1px black solid;
 }
 
-#x_axis_selector, #y_axis_selector {
-  max-width: ($gridColumnWidth * 2 + ($gridGutterWidth * (2 - 1)));
+input#x_axis_autocomplete, input#y_axis_autocomplete {
+  max-width: 180px;
+  font-size:11px;
+}
+
+.ui-autocomplete {
+  max-height: 120px;
+  max-width: 180px;
+  font-size:11px;
+  background-color: white;
+    overflow-y: auto; /* prevent horizontal scrollbar */
+    overflow-x: hidden;
 }
 
 body {
