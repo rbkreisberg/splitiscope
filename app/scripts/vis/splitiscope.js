@@ -38,7 +38,6 @@ var __ = {
               "left" : 30,
               "right" : 10
             },
-    colorLabel  : 'class',
     radius : 4,
     dataType : { 
                  "x" : 'numerical',
@@ -47,12 +46,19 @@ var __ = {
     data : {x:[],y:[], class:[] },
     splits : {},
     id : 'id',
-    labels : { 
-              "x" : "X Axis",
+    axes : {
+        labels : {
+             "x" : "X Axis",
               "y" : "Y Axis"
-              },
-    categoryColor : null,
-    update : false,
+        },
+        attr : {
+            "x" : "x",
+            "y" : "y"
+        }
+    },
+    categoryColor : function(d) { return __.pointColors[0] },
+    class : {label:"", list:[]},
+    clear : true,
  };
 
   _.extend(__, config);
@@ -98,8 +104,9 @@ var __ = {
   var side_effects = d3.dispatch.apply(this,d3.keys(__))
     .on("radius", function(d) { symbolSize = Math.pow(__.radius,2);})
     .on("data", function(d) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
-    .on("splits", function(d) { parseSplits(); console.log('splitscope: splits loaded');})
-    .on("labels", function(d) { updateAxisLabels();});
+    .on("class", setClassScales )
+    .on("splits", parseSplits )
+    .on("axes", updateAxisLabels );
    
   var splitiscope = function(selection) {
     selection = splitiscope.selection = d3.select(selection);
@@ -186,7 +193,7 @@ splitiscope.render = function() {
 
   drawSplitLabel();
 
-  __.update = false;
+  __.clear = false;
 
     return this;
 };
@@ -245,7 +252,7 @@ function drawAxes() {
    yAxis.append('text')
     .attr('class','axis_label')
     .attr('transform','translate('+ (plotWidth() + 45) +',' + plotHeight()*.6667 + ')rotate(-90)')
-    .text(__.labels.y);
+    .text(__.axes.labels.y);
 
    xAxis.append('g')
     .attr('class','ticks')
@@ -255,7 +262,7 @@ function drawAxes() {
    xAxis.append('text')
     .attr('class','axis_label')
     .attr('transform','translate(' + plotWidth()*.3334 + ',' + (plotHeight() + 30) +')')
-    .text(__.labels.x);
+    .text(__.axes.labels.x);
 
 
   }
@@ -339,8 +346,8 @@ function updateAxisLabels() {
      var y_axis = bottom_surface.select('.y.axis'), 
       x_axis = bottom_surface.select('.x.axis');
 
-      y_axis.select('.axis_label').text(__.labels.y);
-      x_axis.select('.axis_label').text(__.labels.x);
+      y_axis.select('.axis_label').text(__.axes.labels.y);
+      x_axis.select('.axis_label').text(__.axes.labels.x);
   }
 
 function drawData() {
@@ -352,10 +359,10 @@ function drawData() {
   function colorDataPoint(selector, point) {  
     selector
       .style('fill',function(point) {
-            return  __.categoryColor(String(point[__.colorLabel]));
+            return  __.categoryColor(String(point[__.class.label]));
       })
       .style('stroke',function(point) {
-            return __.categoryColor(String(point[__.colorLabel]));
+            return __.categoryColor(String(point[__.class.label]));
       });
   }
 
@@ -379,14 +386,14 @@ function drawData() {
     .transition()
       .duration(update_duration)
       .attr('transform', function(point) { 
-          return 'translate(' + scales.x(point.x) + ',' +
-          scales.y(point.y) + ')';})
+          return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
+          scales.y(point[ __.axes.attr.y ]) + ')';})
       
       .style('fill-opacity', function(point) {
           return _.isUndefined(point.splits_on_x) ? 
-            1.0 : caseSplitsOpacityscale(point.splits_on_x);
+            0.8 : caseSplitsOpacityscale(point.splits_on_x);
       })
-      .style('stroke-width',2.0)     
+      .style('stroke-width',"1px")     
       .call(colorDataPoint);
  
    var data_text = data_surface.select('.data_labels')
@@ -424,7 +431,7 @@ function drawData() {
           var f = new Array(stacks);
 
           _.each(data_array, function(point, index) {
-                 e[ index ] = d[ point['x'] ] [  point['y'] ] [ String(point[__.colorLabel]) ]++;
+                 e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.class.label]) ]++;
           });
 
           var i = stacks -1;
@@ -453,6 +460,7 @@ function drawData() {
               last_index = colorCategories.length -1;
 
           function category_offset (label) {
+            if (label === "undefined") { label = undefined; }
                 position = colorCategories.indexOf( label ),
                 midpoint = last_index / 2;
             var offset = (position  - midpoint) * (barWidth + (barSpacing * last_index));
@@ -462,17 +470,17 @@ function drawData() {
           data_points
                     .transition()
                       .duration(update_duration)
-                      .style('fill-opacity', 1.0)
-                      .style('stroke-opacity',1.0)
+                      .style('fill-opacity', 0.8)
+                      .style('stroke-opacity',0.8)
                       .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
                               halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
                               barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
                       .attr('transform', 
                         function(point, i) { 
                             return 'translate(' + 
-                                  (scales.x(point.x) + category_offset(String(point[__.colorLabel])) ) +
+                                  (scales.x(point[__.axes.attr.x]) + category_offset(String(point[__.class.label])) ) +
                                     ',' +
-                                  (scales.y(point.y) + band/2 - (e[i]*barHeight)) + ')';
+                                  (scales.y(point[__.axes.attr.y] ) + band/2 - (e[i]*barHeight)) + ')';
                       })
                       .call(colorDataPoint);
                  
@@ -758,25 +766,25 @@ function drawPartitionSpans() {
                     .on('click',function(dims){
                       var split_obj = {};
                       if ( !_.isNull(split_data['x'].span) ) {
-                        split_obj.x = {};
+                        split_obj[__.axes.attr.x] = {};
                         if ( __.dataType.x === 'numerical' ) {
                           var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
-                          split_obj.x = _.clone(x);
+                          split_obj[__.axes.attr.x] = _.clone(x);
                         } else {
                           var xExtent = scales.x.range(),
                               xSelectedVals = _.filter(xExtent, function(val) { return val >= dims[0] && val <= dims[0] + dims[2]; } );
-                          split_obj.x = { values: _.map(xSelectedVals, scales.x.invert) };
+                          split_obj[__.axes.attr.x] = { values: _.map(xSelectedVals, scales.x.invert) };
                         }
                       }
                       if (!_.isNull(split_data['y'].span)) {
-                        split_obj.y = {};
+                        split_obj[__.axes.attr.y] = {};
                         if ( __.dataType.y === 'numerical' ) {
                           var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
-                          split_obj.y = _.clone(y);
+                          split_obj[__.axes.attr.y] = _.clone(y);
                         } else {
                           var yExtent = scales.y.range(),
                               ySelectedVals = yExtent.filter( function(val) { return val >= dims[1] && val <= dims[1] + dims[3];} );
-                          split_obj.y = { values : _.map(ySelectedVals, scales.y.invert) };
+                          split_obj[__.axes.attr.y] = { values : _.map(ySelectedVals, scales.y.invert) };
                         }
                       }
                       events.partition( split_obj );
@@ -905,10 +913,10 @@ function mouseover_fn(el,index, axis) {
     }
 
     var element_properties = _.keys(__.data[0]);
-    if ( _.contains(element_properties, 'x') && _.contains(element_properties, 'y') ) {
-      var xVals = _.uniq(_.pluck(__.data, 'x' ) ),
-          yVals = _.uniq(_.pluck(__.data, 'y' ) );
-          if (!__.update) {
+    if ( _.contains(element_properties,  __.axes.attr.x ) && _.contains(element_properties,  __.axes.attr.y ) ) {
+      var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
+          yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
+          if (__.clear) {
               __.dataType.x =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
               __.dataType.y =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
           }
@@ -951,23 +959,17 @@ function mouseover_fn(el,index, axis) {
     else { 
       scales.y = d3.scale.linear().domain(d3.extent(yVals)).rangeRound([plotHeight()-10,10]);
      }
-    setClassScales();
+    
     return setAxes();
   }
 
   function setClassScales() {
-   
-   var colorLabels = _.map(_.uniq(_.pluck( data_array, __.colorLabel )),String) || '';
+ 
     //if the class hasn't changed, don't modify it.
-    if ( __.update ) {
-      var newCategories = _.difference(colorLabels, colorCategories);
-      colorCategories = colorCategories.concat(newCategories);
-    } else {
-      colorCategories = colorLabels;
-    }
+    colorCategories = __.class.list.length ? _.map( __.class.list, String) : [undefined];
 
     var numberOfCategories = colorCategories.length,
-        colorArray = _.first(__.pointColors,numberOfCategories) || __.pointColors[0];
+        colorArray = _.first(__.pointColors, numberOfCategories) || __.pointColors[0];
 
     __.categoryColor = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
 

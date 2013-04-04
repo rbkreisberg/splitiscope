@@ -85,7 +85,8 @@ define([
 
             var keys, data, data_filter, all, classLabel, classGroup,
                 filter = {  x: null, y: null },
-                labels = {x : "", y : ""};
+                labels = {x : "", y : ""},
+                group = {};
 
             function modify_data(property, arr) {
                 _.each(arr, function(element) {
@@ -105,20 +106,23 @@ define([
 
             function set_data() {
                    
-                    data_filter = crossfilter(data);
-                    all = data_filter.groupAll();
-                    filter = {
-                        x: data_filter.dimension(function(d) { return d.x;}),
-                        y: data_filter.dimension(function(d) { return d.y;})
-                        };
-                    
-                    classLabel = data_filter.dimension(function(d) { return d.class;});
-                    classGroup = classLabel.group().reduceCount();
+                data_filter =  data_filter ? data_filter : crossfilter(data);
+                all = all ? all : data_filter.groupAll();
+                filter[labels.x] = filter[labels.x] ? filter[labels.x] : data_filter.dimension(function(d) { return d[labels.x];});
+                filter[labels.y] = filter[labels.y] ? filter[labels.y] : data_filter.dimension(function(d) { return d[labels.y];});
+
+                if ( _.isString(labels.class) && !_.isUndefined(data[0][labels.class]) ) {
+                    classLabel = filter[labels.class] ? filter[labels.class] : data_filter.dimension(function(d) { return d[labels.class];});
+                    classGroup = group[labels.class] ? group[labels.class] : classLabel.group().reduceCount();
+                }
             }    
 
             function refilter() {
-                filter.x.filter(null);
-                filter.y.filter(null);
+                var initial = {};
+                _.each(_.keys(filter), function(f) { 
+                    filter[f].filter(null);
+                    initial[f]  = { low: -Infinity, high: Infinity, values : [] }; });
+                
                 var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
                     var split = (warehouse.get(el).split);
                     var keys = _.keys(split);
@@ -134,9 +138,7 @@ define([
                                 };
                             }
                             })) );
-                }, { x :{ low: -Infinity, high: Infinity, values : [] }, 
-                     y :{ low: -Infinity, high: Infinity, values : [] } } 
-                );
+                }, initial );
                 filterData(s);
             }
 
@@ -185,7 +187,7 @@ define([
                     ui.draggable.fadeOut(function() {
                         ui.draggable.remove();
                         refilter();
-                        refreshDisplays(false);
+                        refreshDisplays();
                     });
                   }
                 }).disableSelection();
@@ -214,77 +216,94 @@ define([
         }));
 
         var color = splitiscope.categoryColor();
-
-        var group = _.map( _.sortBy(classGroup.top(Infinity),'key'), function(group_obj) {
-            group_obj.color = color(group_obj.key);
-            return group_obj;
-        });
-        $('#classInfo').html(classListTemplate({
-            classLabel: labels.class,
-            classList: group
-        }));
+        if (!_.isUndefined(classGroup) ) {
+            var group = _.map( _.sortBy( classGroup.top(Infinity),'key'), function(group_obj) {
+                group_obj.color = color(group_obj.key);
+                return group_obj;
+            });
+            $('#classInfo').html(classListTemplate({
+                classLabel: labels.class,
+                classList: group
+            }));
+        };
     }
 
-    function updateSplitiscope(old_data) {
+    function updateSplitiscope() {
         splitiscope
-        .update(old_data)
-        .labels(labels)
-        .data(filter.x.top(Infinity))
+        .axes({
+            "attr" : labels,
+            "labels" : labels 
+        })
+        .class({
+            label : labels.class ? labels.class : '',
+            list: classGroup ? _.pluck(classGroup.top(Infinity),'key') : []
+        })
+        .data(filter[labels.x].top(Infinity))
+        .render();
+    }
+
+    function newSplitiscope() {
+        splitiscope
+        .clear(true)
+        .class({
+            label : labels.class ? labels.class : '',
+            list : classGroup ? _.pluck(classGroup.top(Infinity),'key') : []
+        })
+        .axes({
+            "attr" : labels,
+            "labels" : labels 
+        })
+        .data(filter[labels.x].top(Infinity))
         .render();
     }
 
     function newDataDisplay() {
-        if (!( data.length && data[0].x && data[0].y)) return;
+        if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;
 
         if( _.isUndefined(splitiscope)) {
             plot();
             return;
         }
-        updateSplitiscope(false);
+        newSplitiscope();
         updateTotalsTemplates();
     }
 
     function refreshDisplays() {
-        if (!( data.length && data[0].x && data[0].y)) return;
-
-        if( _.isUndefined(splitiscope)) {
-            plot();
-            return;
-        }
-        updateSplitiscope(true);
+        if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;
+        updateSplitiscope();
         updateTotalsTemplates();
     }
 
     function selectElementHooks() {
 
-            $('#y_axis_autocomplete').on('autocompleteselect', function(e, ui){
-               queue()
-                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
-                .await(function(error,f){
-                    modify_data('y',f['caseValues']);
-                    newDataDisplay();
-                });
-                labels.y = ui.item.value;
+        $('#y_axis_autocomplete').on('autocompleteselect', function(e, ui){
+           queue()
+            .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+            .await(function(error,f){
+                modify_data( ui.item.value, f['caseValues'] );
+                newDataDisplay();
             });
+            labels.y = ui.item.value;
+        });
 
-           $('#x_axis_autocomplete').on('autocompleteselect', function(e, ui){
-               queue()
-                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
-                .await(function(error,f){
-                    modify_data('x',f['caseValues']);
-                    newDataDisplay();
-                });
-                labels.x = ui.item.value;
+       $('#x_axis_autocomplete').on('autocompleteselect', function(e, ui){
+           queue()
+            .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+            .await(function(error,f){
+                modify_data( ui.item.value, f['caseValues'] );
+                newDataDisplay();
             });
-           $('#color_by_autocomplete').on('autocompleteselect', function(e, ui){
-               queue()
-                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
-                .await(function(error,f){
-                    modify_data('class',f['caseValues']);
-                    newDataDisplay();
-                });
-                labels.class = ui.item.value;
+            labels.x = ui.item.value;
+        });
+       $('#color_by_autocomplete').on('autocompleteselect', function(e, ui){
+           queue()
+            .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+            .await(function(error,f){
+                modify_data( ui.item.value, f['caseValues'] );
+                newDataDisplay();
             });
+            labels.class = ui.item.value;
+        });
     }
 
     selectElementHooks();
@@ -294,7 +313,7 @@ define([
     var format = d3.format('.3f');
                     var plot = function() {
                             splitiscope = split_vis({
-                                radius: 12,
+                                radius: 8,
                                 margin : {
                                             top: 10, left: 10, bottom: 30, right: 40
                                 }

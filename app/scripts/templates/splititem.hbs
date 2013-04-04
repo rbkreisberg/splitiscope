@@ -1,32 +1,16 @@
 <li class="split_item">
        <i class="icon-resize-vertical icon-large pull-left"></i> 
        <div>
-       {{#with splitItem}}
-         {{#if x}}
-          {{#with x}}
+       {{#each_with_key splitItem key="axis"}}
           {{#if low}}
-            {{label}}: {{low}} - {{high}}
+            {{key}}: {{low}} - {{high}}
           {{else}}
-          {{label}}:
+          {{key}}:
             {{#each values}}
               {{this}}
             {{/each}}
           {{/if}}
-          {{/with}}
             <br/>
-         {{/if}}
-         {{#if y}}
-          {{#with y}}
-          {{#if low}}
-            {{label}}: {{low}} - {{high}}
-          {{else}}
-          {{label}}:
-            {{#each values}}
-              {{this}}
-            {{/each}}
-          {{/if}}
-          {{/with}}
-          {{/if}}
-        {{/with}}
+         {{/each_with_key}}
       </div>
 </li>
