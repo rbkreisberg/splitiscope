@@ -32,16 +32,27 @@ var __ = {
                     "#B55381"
                     ],
     splitColor : "#C1573B",
-    margin : {top:15, bottom: 15, left:30, right: 10},
-    colorLabel  : 'label',
+    margin : {
+              "top" : 15, 
+              "bottom" : 15, 
+              "left" : 30,
+              "right" : 10
+            },
+    colorLabel  : 'class',
     radius : 4,
     dataType : { 
-                 x : 'numerical',
-                 y : 'numerical'
+                 "x" : 'numerical',
+                 "y" : 'numerical'
                },
-    data : {x:[],y:[], label:[] },
+    data : {x:[],y:[], class:[] },
     splits : {},
-    categoryColor : null
+    id : 'id',
+    labels : { 
+              "x" : "X Axis",
+              "y" : "Y Axis"
+              },
+    categoryColor : null,
+    update : false,
  };
 
   _.extend(__, config);
@@ -69,13 +80,13 @@ var __ = {
       selected = {x: null, y: null},
       padding = { top: 24, bottom: 4, left: 30, right: 4 },
       split_data = {x: {}, y: {}},
-      shapes = ['circle','cross','diamond','square','triangle-down','triangle-up'],
+      shapes = ['square','circle','cross','diamond','triangle-down','triangle-up'],
       symbolSize = Math.pow(__.radius,2),
       symbol = d3.svg.symbol().size(symbolSize).type(shapes[0]),
       symbolMap = d3.scale.ordinal().domain([0,5]).range(shapes),
       symbolFunction = _.compose(symbol.type, symbolMap),
       splitStrokeColors = ['red','green','black'],
-      colorCategories,
+      colorCategories = [],
       strokeFunction = function(index) { return splitStrokeColors[index];},
       data_array = [],
       yaxis = d3.svg.axis().orient("right"),
@@ -87,7 +98,8 @@ var __ = {
   var side_effects = d3.dispatch.apply(this,d3.keys(__))
     .on("radius", function(d) { symbolSize = Math.pow(__.radius,2);})
     .on("data", function(d) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
-    .on("splits", function(d) { parseSplits(); console.log('splitscope: splits loaded');});
+    .on("splits", function(d) { parseSplits(); console.log('splitscope: splits loaded');})
+    .on("labels", function(d) { updateAxisLabels();});
    
   var splitiscope = function(selection) {
     selection = splitiscope.selection = d3.select(selection);
@@ -174,6 +186,8 @@ splitiscope.render = function() {
 
   drawSplitLabel();
 
+  __.update = false;
+
     return this;
 };
 
@@ -209,55 +223,147 @@ function updateSplitTextLabel(position,axis) {
                     .attr('transform','translate(' + transform.x + ',' + transform.y + ')');
 }
 
+function drawAxes() {
+    var yAxis = bottom_surface.select('.y.axis'), 
+       xAxis = bottom_surface.select('.x.axis');
+
+    if (yAxis.node() != null | xAxis.node() != null) return updateAxes();
+
+   yAxis = bottom_surface.append('g')
+    .attr('class','y axis');
+
+   xAxis = bottom_surface.append('g')
+    .attr('class','x axis');
+
+   adjustTicks();
+
+   yAxis.append('g')
+    .attr('class','ticks')
+    .attr('transform','translate('+ (plotWidth()) +',0)')
+    .call(yaxis);
+
+   yAxis.append('text')
+    .attr('class','axis_label')
+    .attr('transform','translate('+ (plotWidth() + 45) +',' + plotHeight()*.6667 + ')rotate(-90)')
+    .text(__.labels.y);
+
+   xAxis.append('g')
+    .attr('class','ticks')
+    .attr('transform','translate(0,' + (plotHeight()) +')')
+    .call(xaxis);
+
+   xAxis.append('text')
+    .attr('class','axis_label')
+    .attr('transform','translate(' + plotWidth()*.3334 + ',' + (plotHeight() + 30) +')')
+    .text(__.labels.x);
+
+
+  }
+
+function adjustTicks() {
+   var yAxis = bottom_surface.select('.y.axis'), 
+       xAxis = bottom_surface.select('.x.axis');
+
+    
+    yAxis.select('.ordinal_ticks').remove();
+    xAxis.select('.ordinal_ticks').remove();
+  
+  if ( __.dataType.y === 'ordinal' ) {
+
+    yaxis.tickSize(2);
+    var yOrdinal = yAxis.append('g').attr('class','ordinal_ticks');
+
+  var height_axis = 'y',
+            extent = scales[height_axis].range(),
+              band = ((scales[height_axis].rangeExtent()[1] - scales[height_axis].rangeExtent()[0]) / extent.length),
+              halfBand = band/2;
+
+    var yTicks = scales.y.range();
+
+    var lines = yOrdinal
+                .selectAll('line')
+                .data(yTicks);
+    
+    lines.enter()
+      .append('line')
+      .style('stroke','#888')
+      .style('stroke-width','2px')
+      .attr('x1',0)
+      .attr('x2',plotWidth())
+      .attr('y1',function(point) { return point + halfBand + 2; } )
+      .attr('y2',function(point) { return point + halfBand + 2; } )
+  } 
+  else yaxis.tickSize(-1*plotWidth()+10);
+
+  if ( __.dataType.x === 'ordinal' ) {
+    
+   
+    var xOrdinal = xAxis.append('g').attr('class','ordinal_ticks');
+
+    var  axis = 'x',
+         extent = scales[axis].range(),
+              band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
+              halfBand = band/2;
+
+    var xTicks = scales.x.range();
+
+    var lines = xOrdinal
+                .selectAll('line')
+                .data(xTicks);
+    
+    lines.enter()
+      .append('line')
+      .style('stroke','#888')
+      .style('stroke-width','2px')
+      .attr('x1',function(point) { return point - halfBand; })
+      .attr('x2', function(point) { return point - halfBand; })
+      .attr('y1',0 )
+      .attr('y2',plotHeight() )
+  } 
+
+
+}
+
 function updateAxes() {
   var y_axis = bottom_surface.select('.y.axis'), 
       x_axis = bottom_surface.select('.x.axis');
 
-  y_axis.transition().duration(update_duration).call(yaxis.scale(scales.y));
-  x_axis.transition().duration(update_duration).call(xaxis.scale(scales.x));
+  adjustTicks();
+
+  y_axis.select('.ticks').transition().duration(update_duration).call(yaxis.scale(scales.y));
+  x_axis.select('.ticks').transition().duration(update_duration).call(xaxis.scale(scales.x));
+
 }
 
-function drawAxes() {
-    var y_axis = bottom_surface.select('.y.axis'), 
-        x_axis = bottom_surface.select('.x.axis');
+function updateAxisLabels() {
+     var y_axis = bottom_surface.select('.y.axis'), 
+      x_axis = bottom_surface.select('.x.axis');
 
-    if (y_axis.node() != null || x_axis.node() != null) return updateAxes();
-
-    bottom_surface.append('g')
-    .attr('transform','translate('+ (plotWidth()) +',0)')
-    .attr('class','y axis')
-    .call(yaxis);
-
-    bottom_surface.append('text')
-    .attr('transform','translate('+ (plotWidth() + 25) +',' + plotHeight()/2 + ')rotate(-90)')
-    .text('Y Label');
-
-    bottom_surface.append('g')
-    .attr('transform','translate(0,' + (plotHeight()) +')')
-    .attr('class','x axis')
-    .call(xaxis);
-
-    bottom_surface.append('text')
-    .attr('transform','translate(' + plotWidth()/2 + ',' + (plotHeight() + 30) +')')
-    .text('X Label');
+      y_axis.select('.axis_label').text(__.labels.y);
+      x_axis.select('.axis_label').text(__.labels.x);
   }
 
 function drawData() {
 
   var data_points = data_surface.select('.data')
     .selectAll('.data_point')
-    .data(data_array, function(d) { return d['id']; } );
+    .data(data_array, function(d) { return d[__.id]; } );
+
+  function colorDataPoint(selector, point) {  
+    selector
+      .style('fill',function(point) {
+            return  __.categoryColor(String(point[__.colorLabel]));
+      })
+      .style('stroke',function(point) {
+            return __.categoryColor(String(point[__.colorLabel]));
+      });
+  }
 
   data_points.enter()
       .append('path')
       .attr('class','data_point')
-       .style('fill',function(point) {
-                              return __.categoryColor(point[__.colorLabel]);
-       })
-        .style('stroke-width',2.0)      
-        .style('stroke',function(point) {
-                              return __.categoryColor(point[__.colorLabel]);
-       });
+      .style('fill','#fff')
+      .style('stroke','#fff');
 
   data_points.exit()
       .transition()
@@ -270,10 +376,8 @@ function drawData() {
 
   data_points
         .attr('d',symbolFunction(0).size(symbolSize)())
-       
-  .transition()
+    .transition()
       .duration(update_duration)
-
       .attr('transform', function(point) { 
           return 'translate(' + scales.x(point.x) + ',' +
           scales.y(point.y) + ')';})
@@ -281,7 +385,9 @@ function drawData() {
       .style('fill-opacity', function(point) {
           return _.isUndefined(point.splits_on_x) ? 
             1.0 : caseSplitsOpacityscale(point.splits_on_x);
-      });
+      })
+      .style('stroke-width',2.0)     
+      .call(colorDataPoint);
  
    var data_text = data_surface.select('.data_labels')
                       .selectAll('.data_totals')
@@ -318,7 +424,7 @@ function drawData() {
           var f = new Array(stacks);
 
           _.each(data_array, function(point, index) {
-                 e[ index ] = d[ point['x'] ] [  point['y'] ] [ point[__.colorLabel] ]++;
+                 e[ index ] = d[ point['x'] ] [  point['y'] ] [ String(point[__.colorLabel]) ]++;
           });
 
           var i = stacks -1;
@@ -337,40 +443,39 @@ function drawData() {
 
           var width_axis = 'x',
             width_extent = scales[width_axis].range(),
-             width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
+              width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
            
-          var barHeight = Math.floor( (band - 25) / ( d3.max(e) ) ),
+          var barHeight =  (band - 25) / ( d3.max(e) ) ,
               halfBarHeight = barHeight / 2,
-              barWidth = Math.floor( ( width_band /2) / colorCategories.length),
+              barWidth =  ( width_band /2) / colorCategories.length,
               halfBarWidth = barWidth / 2,
-              barSpacing = barWidth/2;
+              barSpacing = barWidth/colorCategories.length,
+              last_index = colorCategories.length -1;
 
           function category_offset (label) {
-            var last_index = colorCategories.length -1,
                 position = colorCategories.indexOf( label ),
-                  midpoint = last_index / 2;
+                midpoint = last_index / 2;
             var offset = (position  - midpoint) * (barWidth + (barSpacing * last_index));
             return Math.round(offset);
           } 
 
           data_points
-                      .transition()
+                    .transition()
                       .duration(update_duration)
-                      .style('fill-opacity', 1)
+                      .style('fill-opacity', 1.0)
+                      .style('stroke-opacity',1.0)
                       .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
                               halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
                               barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
-                      
-                      .style('stroke-width',"2px")
-                      .style('stroke-opacity',1.0)
                       .attr('transform', 
                         function(point, i) { 
                             return 'translate(' + 
-                                  (scales.x(point.x) + category_offset(point[__.colorLabel]) ) +
+                                  (scales.x(point.x) + category_offset(String(point[__.colorLabel])) ) +
                                     ',' +
                                   (scales.y(point.y) + band/2 - (e[i]*barHeight)) + ')';
-                      });
-
+                      })
+                      .call(colorDataPoint);
+                 
           function text_transform(point) {
                           return 'translate(' + 
                                   (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
@@ -382,21 +487,21 @@ function drawData() {
                       .selectAll('.data_totals')
                       .data(f, String );
                       
-              data_text.enter()
-                        .append("text")
-                        .attr('class','data_totals')
-                        .text(function(point,i){ return point[3];})
-                        .attr('transform', function(point) {
-                              return 'translate(' + 
-                                  (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
-                                    ',' +
-                                  scales.y(point[1]) + ')';});
+          data_text.enter()
+                    .append("text")
+                    .attr('class','data_totals')
+                    .text(function(point,i){ return point[3];})
+                    .attr('transform', function(point) {
+                          return 'translate(' + 
+                              (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
+                                ',' +
+                              scales.y(point[1]) + ')';});
 
-              data_text.transition()
-                        .duration(update_duration)
-                        .attr('transform', text_transform );
+          data_text.transition()
+                    .duration(update_duration)
+                    .attr('transform', text_transform );
 
-              data_text.exit().remove();
+          data_text.exit().remove();
 
     }
 
@@ -803,8 +908,10 @@ function mouseover_fn(el,index, axis) {
     if ( _.contains(element_properties, 'x') && _.contains(element_properties, 'y') ) {
       var xVals = _.uniq(_.pluck(__.data, 'x' ) ),
           yVals = _.uniq(_.pluck(__.data, 'y' ) );
-      __.dataType.x =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
-      __.dataType.y =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
+          if (!__.update) {
+              __.dataType.x =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
+              __.dataType.y =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
+          }
     }
     else {
       console.error('x or y coordinates not packaged in data');
@@ -821,8 +928,9 @@ function mouseover_fn(el,index, axis) {
 
   function setDataScales( xVals, yVals ) {  //unique values for each dimension
     
-      var colorLabels = _.pluck( data_array, __.colorLabel );
-      var  splits_on_x = _.pluck( data_array, 'splits_on_x' );
+    var splits_on_x = _.pluck( data_array, 'splits_on_x' );
+
+    caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
 
     if ( __.dataType.x === "ordinal" ) {
       scales.x = d3.scale.ordinal().domain(xVals.sort()).rangePoints([10,plotWidth()-10],1.0);
@@ -843,16 +951,34 @@ function mouseover_fn(el,index, axis) {
     else { 
       scales.y = d3.scale.linear().domain(d3.extent(yVals)).rangeRound([plotHeight()-10,10]);
      }
+    setClassScales();
+    return setAxes();
+  }
 
-    colorCategories = _.uniq(colorLabels).sort();
+  function setClassScales() {
+   
+   var colorLabels = _.map(_.uniq(_.pluck( data_array, __.colorLabel )),String) || '';
+    //if the class hasn't changed, don't modify it.
+    if ( __.update ) {
+      var newCategories = _.difference(colorLabels, colorCategories);
+      colorCategories = colorCategories.concat(newCategories);
+    } else {
+      colorCategories = colorLabels;
+    }
 
     var numberOfCategories = colorCategories.length,
-        colorArray = _.first(__.pointColors,numberOfCategories);
+        colorArray = _.first(__.pointColors,numberOfCategories) || __.pointColors[0];
 
-    __.categoryColor = d3.scale.ordinal().domain(colorLabels).range(colorArray);
-    caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
+    __.categoryColor = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
+
+  }
+
+  function setAxes() {
     
-    return setAxes();
+    yaxis.scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
+    xaxis.scale(scales['x']).tickSize(2).ticks(5);
+
+    return splitiscope;
   }
 
 function parseSplits() {
@@ -904,8 +1030,7 @@ function parseSplits() {
       if (!_.isUndefined(split_data[axis].data_array)) setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end);
     }
 
-});
-
+  });
 }
 
   function setSplitScales(axis,split_bin_number,split_bin_start,split_bin_end) {
@@ -913,14 +1038,6 @@ function parseSplits() {
     split_data[axis].opacityScale = d3.scale.linear().domain(d3.extent(data)).rangeRound([0.3,0.9]);
     split_data[axis].colorScale = d3.scale.linear().domain(d3.extent(data)).range(['#FFEDA0','#F03B20']);
     split_data[axis].binScale = d3.scale.linear().domain([0,split_bin_number-1]).rangeRound([scales[axis](split_bin_start), scales[axis](split_bin_end)]);
-
-    return splitiscope;
-  }
-
-  function setAxes() {
-    
-    yaxis.scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
-    xaxis.scale(scales['x']).tickSize(2).ticks(5);
 
     return splitiscope;
   }

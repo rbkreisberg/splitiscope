@@ -84,11 +84,12 @@ define([
            var data, data_indices;
 
             var keys, data, data_filter, all, classLabel, classGroup,
-                filter = {  x: null, y: null };
+                filter = {  x: null, y: null },
+                labels = {x : "", y : ""};
 
-            function modify_data(axis, arr) {
+            function modify_data(property, arr) {
                 _.each(arr, function(element) {
-                    data[data_indices[element.cName]][axis] = element.fValue;
+                    data[data_indices[element.cName]][property] = element.fValue;
                 });
                 set_data();
             }
@@ -98,7 +99,7 @@ define([
                 data = new Array(c_arr.length);
                 _.each(c_arr, function(c, index) { 
                     data_indices[c.cName] = index; 
-                    data[index] = {label: c.cName};
+                    data[index] = {id: c.cName};
                 });
             } 
 
@@ -184,7 +185,7 @@ define([
                     ui.draggable.fadeOut(function() {
                         ui.draggable.remove();
                         refilter();
-                        refreshDisplays();
+                        refreshDisplays(false);
                     });
                   }
                 }).disableSelection();
@@ -194,7 +195,7 @@ define([
                 .defer(d3.json, '/query/dataset/cases')
                 .await( function(error, f, c) {
                     var features = _.pluck(f,"fName");
-                    $("#x_axis_autocomplete, #y_axis_autocomplete").autocomplete({
+                    $(".fetch_cases").autocomplete({
                             source: features
                             });
                     set_cases(c);
@@ -219,22 +220,38 @@ define([
             return group_obj;
         });
         $('#classInfo').html(classListTemplate({
+            classLabel: labels.class,
             classList: group
         }));
     }
 
-    function updateSplitiscope() {
-        splitiscope.data(filter.x.top(Infinity)).render();
+    function updateSplitiscope(old_data) {
+        splitiscope
+        .update(old_data)
+        .labels(labels)
+        .data(filter.x.top(Infinity))
+        .render();
+    }
+
+    function newDataDisplay() {
+        if (!( data.length && data[0].x && data[0].y)) return;
+
+        if( _.isUndefined(splitiscope)) {
+            plot();
+            return;
+        }
+        updateSplitiscope(false);
+        updateTotalsTemplates();
     }
 
     function refreshDisplays() {
         if (!( data.length && data[0].x && data[0].y)) return;
 
         if( _.isUndefined(splitiscope)) {
-            plot(data);
+            plot();
             return;
         }
-        updateSplitiscope();
+        updateSplitiscope(true);
         updateTotalsTemplates();
     }
 
@@ -245,8 +262,9 @@ define([
                 .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
                 .await(function(error,f){
                     modify_data('y',f['caseValues']);
-                    refreshDisplays();
+                    newDataDisplay();
                 });
+                labels.y = ui.item.value;
             });
 
            $('#x_axis_autocomplete').on('autocompleteselect', function(e, ui){
@@ -254,8 +272,18 @@ define([
                 .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
                 .await(function(error,f){
                     modify_data('x',f['caseValues']);
-                    refreshDisplays();
+                    newDataDisplay();
                 });
+                labels.x = ui.item.value;
+            });
+           $('#color_by_autocomplete').on('autocompleteselect', function(e, ui){
+               queue()
+                .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
+                .await(function(error,f){
+                    modify_data('class',f['caseValues']);
+                    newDataDisplay();
+                });
+                labels.class = ui.item.value;
             });
     }
 
@@ -264,7 +292,7 @@ define([
     var splitiscope;
     var plot_container = '#plot';
     var format = d3.format('.3f');
-                    var plot = function(data) {
+                    var plot = function() {
                             splitiscope = split_vis({
                                 radius: 12,
                                 margin : {
@@ -274,20 +302,20 @@ define([
                             .on('partition',function(split_obj) {
 
                                 var keys = _.keys(split_obj);
-                            var splitItem = _.object(keys, _.map(keys, function(axis){
-                                if ( _.isFinite(split_obj[axis].low) ) {
-                                    return {
-                                                label: labels[axis],
-                                                low: format(split_obj[axis].low),
-                                                high: format(split_obj[axis].high)
-                                    };
-                                } else {
-                                    return {
-                                        label: labels[axis],
-                                        values: split_obj[axis].values
-                                    };
-                                }
-                            }));
+                                var splitItem = _.object(keys, _.map(keys, function(axis){
+                                    if ( _.isFinite(split_obj[axis].low) ) {
+                                        return {
+                                                    label: labels[axis],
+                                                    low: format(split_obj[axis].low),
+                                                    high: format(split_obj[axis].high)
+                                        };
+                                    } else {
+                                        return {
+                                            label: labels[axis],
+                                            values: split_obj[axis].values
+                                        };
+                                    }
+                                }));
                                    filterData(split_obj);
                                    refreshDisplays();
                                      
@@ -296,7 +324,7 @@ define([
                                     
                                     warehouse.set(new_el, {split: split_obj});
                                 });
-                            refreshDisplays();
+                            newDataDisplay();;
                         };
         }
     };

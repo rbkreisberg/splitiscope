@@ -69,18 +69,23 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
     border: 1px black solid;
 }
 
-input#x_axis_autocomplete, input#y_axis_autocomplete {
-  max-width: 180px;
+.fetch_cases{
+  max-width: 300px;
+  width:100%;
   font-size:11px;
 }
 
 .ui-autocomplete {
+  width:100%;
   max-height: 120px;
-  max-width: 180px;
+  max-width: 300px;
   font-size:11px;
   background-color: white;
     overflow-y: auto; /* prevent horizontal scrollbar */
     overflow-x: hidden;
+}
+.ui-helper-hidden-accessible {
+  width:100%;
 }
 
 body {
