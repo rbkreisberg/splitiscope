@@ -53,6 +53,11 @@ require.config({
       "disableI18n" : true
   },
 
+    "helperPathCallback" :       // Callback to determine the path to look for helpers
+      function (name) {       // ('/template/helpers/'+name by default)
+        return 'js!/templates/helpers/' + name;
+      },
+
   callback: function(o) {
     try {
       console.log('1');
