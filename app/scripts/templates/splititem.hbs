@@ -1,16 +1,22 @@
 <li class="split_item">
        <i class="icon-resize-vertical icon-large pull-left"></i> 
        <div>
-       {{#each_with_key splitItem key="axis"}}
+       {{#each_with_key splitItem key="feature"}}
           {{#if low}}
-            {{key}}: {{low}} - {{high}}
+            {{#feature_id_format feature cols="2,3" delimiter=":" }}
+              {{this}}
+            {{/feature_id_format}}
+            : {{low}} - {{high}}
           {{else}}
-          {{key}}:
+            {{#feature_id_format feature cols="2,3" delimiter=":" }}
+              {{this}}
+            {{/feature_id_format}}
+            : 
             {{#each values}}
               {{this}}
             {{/each}}
           {{/if}}
-            <br/>
+          <br/>
          {{/each_with_key}}
       </div>
 </li>
