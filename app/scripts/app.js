@@ -79,12 +79,16 @@ define([
     var Application = {
         initialize: function(){
             var split_list = '#split_list',
-                split_item = 'li.split_item';
+                split_item_class = 'split_item',
+                disable_class = '_disabled',
+                split_item_class_disabled = split_item_class + disable_class,
+                split_item = 'li.' + split_item_class,
+                split_item_disabled = 'li.' + split_item_class_disabled;
            
            var data, data_indices;
 
             var keys, data, data_filter, all, classLabel, classGroup,
-                filter = {  x: null, y: null },
+                filter = { },
                 labels = {x : "", y : ""},
                 group = {};
 
@@ -121,10 +125,15 @@ define([
                 var initial = {};
                 _.each(_.keys(filter), function(f) { 
                     filter[f].filter(null);
-                    initial[f]  = { low: -Infinity, high: Infinity, values : [] }; });
+                    initial[f]  = { 
+                        "low" : -Infinity, 
+                        "high" : Infinity, 
+                        "values" : [] 
+                        }; 
+                    });
                 
                 var s =  _.reduce( $('li.split_item'), function ( memo, el, index) {
-                    var split = (warehouse.get(el).split);
+                    var split = warehouse.get(el).split;
                     var keys = _.keys(split);
                             return _.extend( memo , _.object(keys, _.map(keys, function(axis) {
                                 if (_.isFinite(split[axis].low) ) {
@@ -158,6 +167,18 @@ define([
                 
                 var $trash = $( '#trash, #trash i, #trash div') ;
 
+                $( split_list ).on('click', split_item, function(e,ui) {
+                    $(this).removeClass(split_item_class).addClass(split_item_class_disabled);
+                    refilter();
+                    refreshDisplays();
+                });
+
+                $( split_list ).on('click', split_item_disabled, function(e,ui) {
+                    $(this).removeClass(split_item_class_disabled).addClass(split_item_class);
+                    refilter();
+                    refreshDisplays();
+                });
+
                 $( split_list ).sortable({
                     placeholder: 'split_placeholder',
                     forcePlaceholderSize: true,
@@ -175,7 +196,7 @@ define([
 
                 // let the trash be droppable, accepting the split items
                 $trash.droppable({
-                  accept: split_item,
+                  accept: split_item + ', ' + split_item_disabled,
                   hoverClass: "ui-state-highlight",
                   activeClass: "ui-state-highlight",
                   tolerance : 'pointer',
@@ -183,7 +204,6 @@ define([
                     $(this).addClass('ui-state-highlight');
                   },
                   drop: function( event, ui ) {
-                    console.log('drop');
                     ui.draggable.fadeOut(function() {
                         ui.draggable.remove();
                         refilter();
@@ -198,7 +218,9 @@ define([
                 .await( function(error, f, c) {
                     var features = _.pluck(f,"fName");
                     $(".fetch_cases").autocomplete({
-                            source: features
+                            source: features,
+                            minLength: 2,
+                            delay: 200
                             });
                     set_cases(c);
                 });
@@ -321,17 +343,17 @@ define([
                             .on('partition',function(split_obj) {
 
                                 var keys = _.keys(split_obj);
-                                var splitItem = _.object(keys, _.map(keys, function(axis){
-                                    if ( _.isFinite(split_obj[axis].low) ) {
+                                var splitItem = _.object(keys, _.map(keys, function( feature ){
+                                    if ( _.isFinite(split_obj[feature].low) ) {
                                         return {
-                                                    label: labels[axis],
-                                                    low: format(split_obj[axis].low),
-                                                    high: format(split_obj[axis].high)
+                                                    label: feature,
+                                                    low: format(split_obj[feature].low),
+                                                    high: format(split_obj[feature].high)
                                         };
                                     } else {
                                         return {
-                                            label: labels[axis],
-                                            values: split_obj[axis].values
+                                            label: feature,
+                                            values: split_obj[feature].values
                                         };
                                     }
                                 }));

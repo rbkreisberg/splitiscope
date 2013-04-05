@@ -33,6 +33,7 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
   padding: 5px 5px 5px 5px;
 }
 
+
 .split_item {
   background-color: #EFF04D;
   cursor: move;
@@ -47,6 +48,11 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 
 .split_item div {
     text-align: right;
+}
+
+.split_item_disabled {
+  @extend .split_item;
+  background-color: rgba(#EFF04D,0.4);
 }
 
 .split_placeholder {

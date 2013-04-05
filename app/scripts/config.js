@@ -18,9 +18,10 @@ require.config({
       "underscore": "../components/underscore/underscore",
       "splitiscope": "vis/splitiscope",
       'hbs' : '../components/require-handlebars-plugin/hbs',
-      'handlebars' : '../components/require-handlebars-plugin/Handlebars',
+      'handlebars' : '../components/require-handlebars-plugin/handlebars',
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
       'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
+      'store' : '../components/store/store', //localStorage and sessionStorage
       'crossfilter' : 'vendor/crossfilter' //need the newer crossfilter and can't use bower yet
   },
   "shim": {
@@ -50,13 +51,12 @@ require.config({
   },
   "hbs" : {
       "templateExtension" : 'hbs',
-      "disableI18n" : true
-  },
-
-    "helperPathCallback" :       // Callback to determine the path to look for helpers
+      "disableI18n" : true,
+      "helperPathCallback" :       // Callback to determine the path to look for helpers
       function (name) {       // ('/template/helpers/'+name by default)
-        return 'js!/templates/helpers/' + name;
-      },
+        return 'templates/helpers/' + name;
+      }
+  },
 
   callback: function(o) {
     try {
