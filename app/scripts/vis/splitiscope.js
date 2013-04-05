@@ -268,24 +268,28 @@ function drawAxes() {
   }
 
 function adjustTicks() {
-   var yAxis = bottom_surface.select('.y.axis'), 
-       xAxis = bottom_surface.select('.x.axis');
+ var yAxis = bottom_surface.select('.y.axis'), 
+     xAxis = bottom_surface.select('.x.axis');
 
-    
-    yAxis.select('.ordinal_ticks').remove();
-    xAxis.select('.ordinal_ticks').remove();
+  yAxis.select('.categorical_ticks').remove();
+  xAxis.select('.categorical_ticks').remove();
+
+  var decimalFormat = d3.format(".4r");
+
+  var axis = 'y',
+      extent ,
+      band , 
+      halfBand ,
+      format = (isNumerical(scales[axis].domain()) && !isInt(scales[axis].domain()) ) ? decimalFormat : null;
   
-  if ( __.dataType.y === 'ordinal' ) {
+  if ( __.dataType.y === 'categorical' ) {
 
-    yaxis.tickSize(2);
-    var yOrdinal = yAxis.append('g').attr('class','ordinal_ticks');
-
-  var height_axis = 'y',
-            extent = scales[height_axis].range(),
-              band = ((scales[height_axis].rangeExtent()[1] - scales[height_axis].rangeExtent()[0]) / extent.length),
-              halfBand = band/2;
-
+    var yOrdinal = yAxis.append('g').attr('class','categorical_ticks');
     var yTicks = scales.y.range();
+
+    extent  = scales[axis].range(),
+    band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
+    halfBand = band/2;
 
     var lines = yOrdinal
                 .selectAll('line')
@@ -298,21 +302,25 @@ function adjustTicks() {
       .attr('x1',0)
       .attr('x2',plotWidth())
       .attr('y1',function(point) { return point + halfBand + 2; } )
-      .attr('y2',function(point) { return point + halfBand + 2; } )
+      .attr('y2',function(point) { return point + halfBand + 2; } );
+
   } 
   else yaxis.tickSize(-1*plotWidth()+10);
 
-  if ( __.dataType.x === 'ordinal' ) {
+  yaxis.tickFormat(format);
+  
+  axis = 'x',
+  format = (isNumerical(scales[axis].domain()) && !isInt(scales[axis].domain()) ) ? decimalFormat : null;
+
+  if ( __.dataType.x === 'categorical' ) {
     
-   
-    var xOrdinal = xAxis.append('g').attr('class','ordinal_ticks');
-
-    var  axis = 'x',
-         extent = scales[axis].range(),
-              band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
-              halfBand = band/2;
-
+    xaxis.tickFormat(d3.format(".4r"));
+    var xOrdinal = xAxis.append('g').attr('class','categorical_ticks');
     var xTicks = scales.x.range();
+
+    extent  = scales[axis].range(),
+    band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
+    halfBand = band/2;
 
     var lines = xOrdinal
                 .selectAll('line')
@@ -325,9 +333,11 @@ function adjustTicks() {
       .attr('x1',function(point) { return point - halfBand; })
       .attr('x2', function(point) { return point - halfBand; })
       .attr('y1',0 )
-      .attr('y2',plotHeight() )
+      .attr('y2',plotHeight() );
+      
   } 
 
+ xaxis.tickFormat(format);
 
 }
 
@@ -393,7 +403,7 @@ function drawData() {
           return _.isUndefined(point.splits_on_x) ? 
             0.8 : caseSplitsOpacityscale(point.splits_on_x);
       })
-      .style('stroke-width',"1px")     
+      .style('stroke-width',"0px")     
       .call(colorDataPoint);
  
    var data_text = data_surface.select('.data_labels')
@@ -537,7 +547,7 @@ function drawSplits() {
             if ( __.dataType[axis] === 'numerical' ) {
                 drawNumericalAxisSplits(axis);
             } else {
-                drawOrdinalAxisSplits(axis);
+                drawCategoricalAxisSplits(axis);
             }
             });
 }
@@ -563,7 +573,7 @@ function styleSplitSelector( split_selector, axis ) {
              
 }
 
-function defineOrdinalSplitShape ( selection, axis ) {
+function defineCategoricalSplitShape ( selection, axis ) {
   var domain = scales[axis].domain(),
       extent = scales[axis].range(),
          band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length) - 10;
@@ -583,7 +593,7 @@ function defineOrdinalSplitShape ( selection, axis ) {
   }
 }
 
-function drawOrdinalAxisSplits ( axis ) {
+function drawCategoricalAxisSplits ( axis ) {
    
    split_group = split_surface.select('.' + axis + '.split_group');
 
@@ -594,7 +604,7 @@ function drawOrdinalAxisSplits ( axis ) {
 
       splits.enter()
            .append('rect')     
-              .call(defineOrdinalSplitShape, axis )
+              .call(defineCategoricalSplitShape, axis )
               .call(styleSplitSelector, axis )
               .on('mouseover', function() {
                 d3.select(this)
@@ -615,7 +625,7 @@ function drawOrdinalAxisSplits ( axis ) {
 
     splits.transition()
               .duration(update_duration)
-              .call(defineOrdinalSplitShape, axis );
+              .call(defineCategoricalSplitShape, axis );
 
     splits.exit()
           .remove();
@@ -845,12 +855,13 @@ function mouseover_fn(el,index, axis) {
   }
 
   function selectCategoricalSplitValue(value, axis) {
+    var domain = scales[axis].domain();
     if (!_.contains(selected[axis], value)) selected[axis].push(value);
-    var remaining_values = _.difference( scales[axis].domain(), selected[axis] ),
-        domain = _.union(selected[axis],remaining_values),
-        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
+    var remaining_values = _.difference( domain, selected[axis] ),
+        new_domain = _.union(selected[axis],remaining_values),
+        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / new_domain.length) ;
 
-    scales[axis].domain(domain);
+    scales[axis].domain(new_domain);
     scales[axis].invert.range(domain);
     
     split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1));
@@ -894,12 +905,21 @@ function mouseover_fn(el,index, axis) {
       updateSplitTextLabel(null, axis);
   }
 
-  function isOrdinal(array) {
-    if ( !_.isArray(array)) return false; //can't handle a non-array...
-    var vals = _.uniq(array);
+  function isCategorical(vals) {
+    if ( !_.isArray(vals)) return false; //can't handle a non-array...
     if ( vals.length <= 6 ) return true;   // too few values
     if ( _.some(vals, _.isString) ) return true;  // any strings?
     return false;
+  }
+
+  function isNumerical(array) {
+    return _.all(array, _.isNumber);
+  }
+
+  function isInt(array) {
+    return _.all(array, function(n) {
+       return n % 1 === 0;
+    });
   }
 
   function isFinite(array) {  // check if there's a terrible number (Infinity, NaN) in there
@@ -917,8 +937,8 @@ function mouseover_fn(el,index, axis) {
       var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
           yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
           if (__.clear) {
-              __.dataType.x =  isOrdinal( xVals ) ? 'ordinal' : 'numerical';
-              __.dataType.y =  isOrdinal( yVals ) ? 'ordinal' : 'numerical';
+              __.dataType.x =  isCategorical( xVals ) ? 'categorical' : 'numerical';
+              __.dataType.y =  isCategorical( yVals ) ? 'categorical' : 'numerical';
           }
     }
     else {
@@ -940,7 +960,7 @@ function mouseover_fn(el,index, axis) {
 
     caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
 
-    if ( __.dataType.x === "ordinal" ) {
+    if ( __.dataType.x === 'categorical' ) {
       scales.x = d3.scale.ordinal().domain(xVals.sort()).rangePoints([10,plotWidth()-10],1.0);
       scales.x.invert = d3.scale.ordinal().domain(scales.x.range()).range(xVals);
 
@@ -950,7 +970,7 @@ function mouseover_fn(el,index, axis) {
       scales.x =d3.scale.linear().domain(d3.extent(xVals)).rangeRound([10,plotWidth()-10]);
    }
                      
-    if ( __.dataType.y === "ordinal" ) {
+    if ( __.dataType.y === 'categorical' ) {
       scales.y = d3.scale.ordinal().domain(yVals.sort(d3.descending)).rangePoints([plotHeight()-10,10],1.0);
       scales.y.invert = d3.scale.ordinal().domain(scales.y.range()).range(yVals);
       
