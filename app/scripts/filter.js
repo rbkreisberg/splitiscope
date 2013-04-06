@@ -36,9 +36,11 @@ define([
 
             filterValues : function( label , range ) {
                 if ( !Filter.column(label) ) Filter.filterColumn( label );
-                if ( range.length != 2 || !(_.all(range,_.isNumber))  ) {//filterFunction
+                if ( range.length != 2 || !(_.all(range,_.isNumber))  ) { 
+                    // a set of categorical values
                     filter[label].filterFunction(function(val) { return _.contains(range, val ); } );
-                } else {
+                } else { 
+                    // a low, high pair
                      filter[label].filterRange( _.map([range[0], range[1]], parseFloat) );
                 }
             },
@@ -48,7 +50,8 @@ define([
             },
 
             getGroups : function( label ) {
-                return _.pluck( classGroup.top(Infinity),'key').sort();
+                if ( group[label] === undefined ) return [];
+                return _.pluck( group[label].top(Infinity),'key').sort();
             },
 
             getRows : function( label, num ) {
