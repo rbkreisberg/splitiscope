@@ -14,68 +14,6 @@ define([
         console.error(msg);
     }
 
-    var range = { 
-                x : {
-                    min : 0, 
-                    max : 8
-                },
-                y : { 
-                    min :-4, 
-                    max : 4
-                }
-            },
-        splits_range = { min : 20, max : 200},
-        label_list = ['high', 'low'],
-        test_data = {},
-        num = 500,
-        labels = {
-                    x : 'Feature X',
-                    y : 'Feature Y'
-                };
-
-    function numerical_data(axis) {
-           return  _.map(_.range(num),function(value) {
-               return (Math.random()*(range[axis].max - range[axis].min) + range[axis].min);
-           });
-    }
-
-    function categorical_data(axis) {
-           return _.map(_.range(num),function(value) {
-                return ['A','B','C','D'][Math.round(Math.random()*3)];
-            });
-    }
-
-   test_data.label = _.map(_.range(num),function(value) {
-                return label_list[Math.round(Math.random() * (label_list.length-1))];
-    });
-
-   test_data.splits_on_x = _.map(_.range(num),function(value) {
-                return Math.round(Math.random()*(splits_range.max - splits_range.min) + splits_range.min);
-    });
-
-   test_data.id = _.map(_.range(num),function(value) {
-                return String.fromCharCode.apply(this, _.map(_.range(5),function()  { return Math.random()*26 + 65;}));
-    });
-
- 
-    var test_split_x = {
-
-                bins: _.map(_.range(1,9), function(value) {
-                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
-                }),
-                low: range.x.min + 1,
-                binsize: ((range.x.max -1) - (range.x.min +1)) / 10
-    };
-
-    var test_split_y = {
-
-                bins: _.map(_.range(1,9), function(value) {
-                   return Math.pow(value+1,-1*Math.abs((value-5)/10))* num;
-                }),
-                low: range.y.min + 1,
-                binsize: ((range.y.max -1) - (range.y.min +1)) / 10
-    };
-
     var Application = {
         initialize: function(){
             var split_list = '#split_list',
