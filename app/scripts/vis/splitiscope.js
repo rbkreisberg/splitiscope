@@ -244,14 +244,25 @@ function drawAxes() {
 
    adjustTicks();
 
+   splitiscope.svg.select('defs').append('path')
+   .attr('id','y_axis_alignment')
+   .attr('d','M ' + (plotWidth() + 45) + ' 0 L ' +(plotWidth() + 45) + ' ' + plotHeight() );
+
+  splitiscope.svg.select('defs').append('path')
+   .attr('id','x_axis_alignment')
+   .attr('d','M 0 ' + (plotHeight()+28) + ' L '+ plotWidth() + ' ' + (plotHeight()+28));
+
    yAxis.append('g')
     .attr('class','ticks')
     .attr('transform','translate('+ (plotWidth()) +',0)')
     .call(yaxis);
 
    yAxis.append('text')
+    .style('text-anchor','middle')
+   .append('textPath')
     .attr('class','axis_label')
-    .attr('transform','translate('+ (plotWidth() + 45) +',' + plotHeight()*.6667 + ')rotate(-90)')
+    .attr('xlink:href','#y_axis_alignment')
+    .attr('startOffset','50%')
     .text(__.axes.labels.y);
 
    xAxis.append('g')
@@ -260,8 +271,11 @@ function drawAxes() {
     .call(xaxis);
 
    xAxis.append('text')
+    .style('text-anchor','middle')
+   .append('textPath')
     .attr('class','axis_label')
-    .attr('transform','translate(' + plotWidth()*.3334 + ',' + (plotHeight() + 30) +')')
+    .attr('startOffset','50%')
+    .attr('xlink:href','#x_axis_alignment')
     .text(__.axes.labels.x);
 
 
