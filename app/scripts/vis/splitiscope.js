@@ -287,6 +287,8 @@ function adjustTicks() {
     var yOrdinal = yAxis.append('g').attr('class','categorical_ticks');
     var yTicks = scales.y.range();
 
+    yaxis.tickSize(0);
+
     extent  = scales[axis].range(),
     band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
     halfBand = band/2;
@@ -297,12 +299,12 @@ function adjustTicks() {
     
     lines.enter()
       .append('line')
-      .style('stroke','#888')
-      .style('stroke-width','2px')
-      .attr('x1',0)
-      .attr('x2',plotWidth())
-      .attr('y1',function(point) { return point + halfBand + 2; } )
-      .attr('y2',function(point) { return point + halfBand + 2; } );
+      .style('stroke', '#888')
+      .style('stroke-width', '2px')
+      .attr('x1', 10)
+      .attr('x2', plotWidth())
+      .attr('y1', function(point) { return point + halfBand + 2; } )
+      .attr('y2', function(point) { return point + halfBand + 2; } );
 
   } 
   else yaxis.tickSize(-1*plotWidth()+10);
@@ -316,7 +318,7 @@ function adjustTicks() {
     
     xaxis.tickFormat(d3.format(".4r"));
     var xOrdinal = xAxis.append('g').attr('class','categorical_ticks');
-    var xTicks = scales.x.range();
+    var xTicks = scales.x.range().slice(1);
 
     extent  = scales[axis].range(),
     band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / extent.length),
@@ -328,12 +330,12 @@ function adjustTicks() {
     
     lines.enter()
       .append('line')
-      .style('stroke','#888')
-      .style('stroke-width','2px')
+      .style('stroke', '#888')
+      .style('stroke-width', '2px')
       .attr('x1',function(point) { return point - halfBand; })
       .attr('x2', function(point) { return point - halfBand; })
-      .attr('y1',0 )
-      .attr('y2',plotHeight() );
+      .attr('y1', 10 )
+      .attr('y2',plotHeight() -10 );
       
   } 
 
@@ -493,12 +495,21 @@ function drawData() {
                                   (scales.y(point[__.axes.attr.y] ) + band/2 - (e[i]*barHeight)) + ')';
                       })
                       .call(colorDataPoint);
-                 
-          function text_transform(point) {
-                          return 'translate(' + 
-                                  (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
-                                    ',' +
-                                  (scales.y(point[1]) + band/2 - ((point[3]+1)*barHeight)) + ')';
+
+          function vertical_offset( point ) { return ( point[3] + 1 ) * barHeight; } 
+          function text_color( point ) { return addOffset( point ) ? '#fff' : null; }
+          function addOffset( point ) { return ( vertical_offset(point) > band/2); }
+          
+          function text_styling( selector, point ) {
+                  selector
+                    .style('stroke', null )
+                    .style('fill', text_color )
+                    .style('visibility', function(point) { return +point[3] <= 0 ? 'hidden' : null; } )
+                    .attr('transform', function(point) { return 'translate(' + 
+                        (scales.x(point[0]) + category_offset( point[2] )) + 
+                          ',' +
+                        (scales.y(point[1]) + band/2 - vertical_offset(point) + 
+                          (addOffset(point) * 20) ) + ')'; } );
           }
 
           var data_text = data_surface.select('.data_labels')
@@ -508,16 +519,17 @@ function drawData() {
           data_text.enter()
                     .append("text")
                     .attr('class','data_totals')
+                    .style('text-anchor','middle')
                     .text(function(point,i){ return point[3];})
                     .attr('transform', function(point) {
                           return 'translate(' + 
-                              (scales.x(point[0]) + category_offset( point[2] ) - barWidth /4) + 
+                              (scales.x(point[0]) + category_offset( point[2] )) + 
                                 ',' +
                               scales.y(point[1]) + ')';});
 
           data_text.transition()
                     .duration(update_duration)
-                    .attr('transform', text_transform );
+                    .call(text_styling)
 
           data_text.exit().remove();
 
@@ -862,9 +874,9 @@ function mouseover_fn(el,index, axis) {
         band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / new_domain.length) ;
 
     scales[axis].domain(new_domain);
-    scales[axis].invert.range(domain);
+    scales[axis].invert.range(new_domain);
     
-    split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1));
+    split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1) );
     updateAxes();
     drawData();
     drawSplits();
