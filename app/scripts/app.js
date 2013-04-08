@@ -154,6 +154,7 @@ define([
                 .defer(d3.json, '/query/dataset/features')
                 .defer(d3.json, '/query/dataset/cases')
                 .await( function(error, f, c) {
+                    if (error) errorMsg(error);
                     var features = _.pluck(f,"fName");
                     $(".fetch_cases").autocomplete({
                             source: features,
@@ -235,34 +236,16 @@ define([
     }
 
     function selectElementHooks() {
-
-        $('#y_axis_autocomplete').on('autocompleteselect', function(e, ui){
+        _.each(['x','y','class'], function(attr) {
+           $('#' + attr + '_axis_autocomplete').on('autocompleteselect', function(e, ui){
            queue()
             .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
             .await(function(error,f){
                 modify_data( ui.item.value, f['caseValues'] );
                 newDataDisplay();
             });
-            labels.y = ui.item.value;
-        });
-
-       $('#x_axis_autocomplete').on('autocompleteselect', function(e, ui){
-           queue()
-            .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
-            .await(function(error,f){
-                modify_data( ui.item.value, f['caseValues'] );
-                newDataDisplay();
-            });
-            labels.x = ui.item.value;
-        });
-       $('#color_by_autocomplete').on('autocompleteselect', function(e, ui){
-           queue()
-            .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
-            .await(function(error,f){
-                modify_data( ui.item.value, f['caseValues'] );
-                newDataDisplay();
-            });
-            labels.class = ui.item.value;
+            labels[attr] = ui.item.value;
+          });
         });
     }
 
@@ -271,40 +254,40 @@ define([
     var splitiscope;
     var plot_container = '#plot';
     var format = d3.format('.3f');
-                    var plot = function() {
-                            splitiscope = split_vis({
-                                radius: 8,
-                                margin : {
-                                            top: 10, left: 10, bottom: 30, right: 40
-                                }
-                            })(plot_container)
-                            .on('partition',function(split_obj) {
+    var plot = function() {
+            splitiscope = split_vis({
+                radius: 8,
+                margin : {
+                            top: 10, left: 10, bottom: 30, right: 40
+                }
+            })(plot_container)
+            .on('partition',function(split_obj) {
 
-                                var keys = _.keys(split_obj);
-                                var splitItem = _.object(keys, _.map(keys, function( feature ){
-                                    if ( _.isFinite(split_obj[feature].low) ) {
-                                        return {
-                                                    label: feature,
-                                                    low: format(split_obj[feature].low),
-                                                    high: format(split_obj[feature].high)
-                                        };
-                                    } else {
-                                        return {
-                                            label: feature,
-                                            values: split_obj[feature].values
-                                        };
-                                    }
-                                }));
-                                   filterData(split_obj);
-                                   refreshDisplays();
-                                     
-                                    var new_el = $.parseHTML( splitItemTemplate({ "splitItem" : splitItem }) )[0];
-                                    $( split_list ).prepend(new_el);
-                                    
-                                    warehouse.set(new_el, {split: split_obj});
-                                });
-                            newDataDisplay();;
+                var keys = _.keys(split_obj);
+                var splitItem = _.object(keys, _.map(keys, function( feature ){
+                    if ( _.isFinite(split_obj[feature].low) ) {
+                        return {
+                                    label: feature,
+                                    low: format(split_obj[feature].low),
+                                    high: format(split_obj[feature].high)
                         };
+                    } else {
+                        return {
+                            label: feature,
+                            values: split_obj[feature].values
+                        };
+                    }
+                }));
+                   filterData(split_obj);
+                   refreshDisplays();
+                     
+                    var new_el = $.parseHTML( splitItemTemplate({ "splitItem" : splitItem }) )[0];
+                    $( split_list ).prepend(new_el);
+                    
+                    warehouse.set(new_el, {split: split_obj});
+                });
+            newDataDisplay();;
+        };
         }
     };
     return Application;

@@ -18,7 +18,7 @@ require.config({
       "underscore": "../components/underscore/underscore",
       "splitiscope": "vis/splitiscope",
       'hbs' : '../components/require-handlebars-plugin/hbs',
-      'handlebars' : '../components/require-handlebars-plugin/handlebars',
+      'handlebars' : '../components/require-handlebars-plugin/Handlebars',
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
       'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
       'store' : '../components/store/store', //localStorage and sessionStorage

@@ -231,10 +231,10 @@ function updateSplitTextLabel(position,axis) {
 }
 
 function drawAxes() {
-    var yAxis = bottom_surface.select('.y.axis'), 
+  var yAxis = bottom_surface.select('.y.axis'), 
        xAxis = bottom_surface.select('.x.axis');
 
-    if (yAxis.node() != null | xAxis.node() != null) return updateAxes();
+  if (yAxis.node() != null | xAxis.node() != null) return updateAxes();
 
    yAxis = bottom_surface.append('g')
     .attr('class','y axis');
@@ -268,7 +268,7 @@ function drawAxes() {
   }
 
 function adjustTicks() {
- var yAxis = bottom_surface.select('.y.axis'), 
+  var yAxis = bottom_surface.select('.y.axis'), 
      xAxis = bottom_surface.select('.x.axis');
 
   yAxis.select('.categorical_ticks').remove();
