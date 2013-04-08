@@ -27,7 +27,7 @@ define([
 
             var keys, data, data_filter, all, classLabel, classGroup,
                 filter = { },
-                labels = {x : "", y : ""},
+                labels = {"x" : "", "y" : ""},
                 group = {};
 
             function modify_data(property, arr) {
@@ -237,7 +237,7 @@ define([
 
     function selectElementHooks() {
         _.each(['x','y','class'], function(attr) {
-           $('#' + attr + '_axis_autocomplete').on('autocompleteselect', function(e, ui){
+           $('#' + attr + '_autocomplete').on('autocompleteselect', function(e, ui){
            queue()
             .defer(d3.json,'/query/dataset/mValues?feature='+ui.item.value)
             .await(function(error,f){
