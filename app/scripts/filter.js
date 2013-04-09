@@ -7,35 +7,49 @@ define([
 
         var cf_obj,
                all,
-             filter = {};
+             filter = {},
              group = {};
 
-        var Filter = {
-
-            initialize : function(data) {
-                cf_obj = crossfilter(data);
+        var Filter = function(data) {
+             cf_obj = crossfilter(data);
                 all = cf_obj.groupAll();
-            },
+                return Filter;
+            };
 
-            column : function(label) {
-                if arguments.length < 1 return Object.keys(filter);
+            Filter.currentSize = function() {
+                return cf_obj.size();
+            };
+
+            Filter.totalSize = function() {
+                return all.value();
+            }
+
+            Filter.columns = function() {
+                return Object.keys(filter);
+            };
+
+            Filter.has = function(label) {
                 if ( filter[ label ] === undefined ) return false;
                 return true;
-            },
+            };
 
-            filterColumn : function( label , property ) { //property is optional
+            Filter.addColumn = function( label , property ) { //property is optional
                 if  ( arguments.length < 2 ) property = label;
+                if (Filter.has(label)) return Filter;
                 filter[label] = cf_obj.dimension(function(d) { return d[property]; });
-            },
+                return Filter;
+            };
 
-            groupColumn : function( label , property ) { //property is optional
+            Filter.addGroup = function( label , property ) { //property is optional
                 if  ( arguments.length < 2 ) property = label;
-                if ( !column( label ) ) Filter.filterColumn(label, property);
+                if ( !Filter.has( label ) ) Filter.addColumn(label, property);
+                if ( group[label] !== undefined ) return Filter;
                 group[label] = filter[label].group().reduceCount();
-            },
+                return Filter;
+            };
 
-            filterValues : function( label , range ) {
-                if ( !Filter.column(label) ) Filter.filterColumn( label );
+            Filter.filterColumn = function( label , range ) {
+                if ( !Filter.has(label) ) Filter.addColumn( label );
                 if ( range.length != 2 || !(_.all(range,_.isNumber))  ) { 
                     // a set of categorical values
                     filter[label].filterFunction(function(val) { return _.contains(range, val ); } );
@@ -43,24 +57,33 @@ define([
                     // a low, high pair
                      filter[label].filterRange( _.map([range[0], range[1]], parseFloat) );
                 }
-            },
+                return Filter;
+            };
 
-            resetFilter : function ( label ) {
+            Filter.resetFilter = function ( label ) {
                 filter[label].filter(null);
-            },
+                return Filter;
+            };
 
-            getGroups : function( label ) {
+             Filter.getGroupEntries = function( label, sorted) {
                 if ( group[label] === undefined ) return [];
-                return _.pluck( group[label].top(Infinity),'key').sort();
-            },
+                sorted = ( sorted === undefined ) ? true : sorted;
+                if ( sorted ) return _.sortBy(group[label].top( Infinity ), 'key' );
+                return _.sortBy( group[label].top( Infinity ), 'key' );
+            };
 
-            getRows : function( label, num ) {
+            Filter.getGroupLabels = function( label, sorted) {
+                if ( group[label] === undefined ) return [];
+                sorted = ( sorted === undefined ) ? true : sorted;
+                if ( sorted ) return _.pluck( group[label].top( Infinity ), 'key' ).sort();
+                return _.pluck( group[label].top( Infinity ), 'key' );
+            };
+
+            Filter.getRows = function( label, num ) {
                 if (arguments.length < 2) num = Infinity;
                 if (arguments.length < 1) label = Object.keys(filter)[0];
                 return filter[label].top(num);
-            }
-
-        };
+            };
 
         return Filter;
 });

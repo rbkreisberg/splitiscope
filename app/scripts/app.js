@@ -4,10 +4,11 @@ define([
     'splitiscope',
     'crossfilter',
     'data',
+    'filter',
     'hbs!templates/splititem',
     'hbs!templates/totals',
     'hbs!templates/classList',
-], function (queue, split_vis, crossfilter, warehouse, splitItemTemplate, totalsItemTemplate, classListTemplate) {
+], function (queue, split_vis, crossfilter, warehouse, filter, splitItemTemplate, totalsItemTemplate, classListTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -25,8 +26,7 @@ define([
            
            var data, data_indices;
 
-            var keys, data, data_filter, all, classLabel, classGroup,
-                filter = { },
+            var keys, data, data_filter,
                 labels = {"x" : "", "y" : ""},
                 group = {};
 
@@ -47,22 +47,18 @@ define([
             } 
 
             function set_data() {
-                   
-                data_filter =  data_filter ? data_filter : crossfilter(data);
-                all = all ? all : data_filter.groupAll();
-                filter[labels.x] = filter[labels.x] ? filter[labels.x] : data_filter.dimension(function(d) { return d[labels.x];});
-                filter[labels.y] = filter[labels.y] ? filter[labels.y] : data_filter.dimension(function(d) { return d[labels.y];});
-
+                if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;   
+                data_filter =  data_filter ? data_filter : filter(data);
+                data_filter.addColumn(labels.x).addColumn(labels.y);
                 if ( _.isString(labels.class) && !_.isUndefined(data[0][labels.class]) ) {
-                    classLabel = filter[labels.class] ? filter[labels.class] : data_filter.dimension(function(d) { return d[labels.class];});
-                    classGroup = group[labels.class] ? group[labels.class] : classLabel.group().reduceCount();
+                   data_filter.addGroup( labels.class );
                 }
             }    
 
             function refilter() {
                 var initial = {};
-                _.each(_.keys(filter), function(f) { 
-                    filter[f].filter(null);
+                _.each( data_filter.columns(), function(f) { 
+                    data_filter.resetFilter();
                     initial[f]  = { 
                         "low" : -Infinity, 
                         "high" : Infinity, 
@@ -93,9 +89,9 @@ define([
                 var keys = _.keys( split );
                 _.each(keys, function(axis) {
                     if (_.isFinite(split[axis].low)) {
-                    filter[axis].filterRange(_.map([split[axis].low, split[axis].high], parseFloat));
+                    data_filter.filterColumn(axis, _.map([split[axis].low, split[axis].high], parseFloat));
                 } else if ( split[axis].values.length > 0) {
-                    filter[axis].filterFunction(function(val) { return _.contains(split[axis].values, val ); } );
+                    data_filter.filterColumn(axis, split[axis].values );
                 }
                 });
             }
@@ -172,13 +168,13 @@ define([
 
     function updateTotalsTemplates() {
         $('#summary').html(totalsItemTemplate({
-            filtered_total :  all.value(),
-            total : data_filter.size()
+            filtered_total :  data_filter.totalSize(),
+            total : data_filter.currentSize()
         }));
 
         var color = splitiscope.categoryColor();
-        if (!_.isUndefined(classGroup) ) {
-            var group = _.map( _.sortBy( classGroup.top(Infinity),'key'), function(group_obj) {
+        if ( data_filter.has(labels.class) ) {
+            var group = _.map( data_filter.getGroupEntries( labels.class ), function(group_obj) {
                 group_obj.color = color(group_obj.key);
                 return group_obj;
             });
@@ -197,9 +193,9 @@ define([
         })
         .class({
             label : labels.class ? labels.class : '',
-            list: classGroup ? _.pluck(classGroup.top(Infinity),'key') : []
+            list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : []
         })
-        .data(filter[labels.x].top(Infinity))
+        .data(data_filter.getRows())
         .render();
     }
 
@@ -208,13 +204,13 @@ define([
         .clear(true)
         .class({
             label : labels.class ? labels.class : '',
-            list : classGroup ? _.pluck(classGroup.top(Infinity),'key') : []
+            list : data_filter.has( labels.class ) ? data_filter.getGroupLabels( labels.class ) : []
         })
         .axes({
             "attr" : labels,
             "labels" : labels 
         })
-        .data(filter[labels.x].top(Infinity))
+        .data(data_filter.getRows())
         .render();
     }
 
