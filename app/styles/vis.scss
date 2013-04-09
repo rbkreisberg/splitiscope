@@ -6,7 +6,7 @@
 .axis path, .axis line {
     fill: none;
     stroke: #000;
-    stroke-width: 1.0px;
+    stroke-width: 2.0px;
     shape-rendering: crispEdges;
 }
 
@@ -19,6 +19,15 @@
     fill:none;
 }
 
+.axis_label, .ticks {
+    font-size:16px;
+}
+
 .data_totals {
     shape-rendering: crispEdges;
+}
+
+.data_labels {
+    font-size: 18px;
+    font-weight: bold;
 }

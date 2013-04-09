@@ -387,9 +387,7 @@ function drawData() {
       .style('fill',function(point) {
             return  __.categoryColor(String(point[__.class.label]));
       })
-      .style('stroke',function(point) {
-            return __.categoryColor(String(point[__.class.label]));
-      });
+      .style('stroke', null);
   }
 
   data_points.enter()
@@ -478,7 +476,7 @@ function drawData() {
             width_extent = scales[width_axis].range(),
               width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
            
-          var barHeight =  (band - 25) / ( d3.max(e) ) ,
+          var barHeight =  (band - 25) / ( d3.max(e) + 1 ) ,
               halfBarHeight = barHeight / 2,
               barWidth =  ( width_band /2) / colorCategories.length,
               halfBarWidth = barWidth / 2,
@@ -497,7 +495,6 @@ function drawData() {
                     .transition()
                       .duration(update_duration)
                       .style('fill-opacity', 0.8)
-                      .style('stroke-opacity',0.8)
                       .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
                               halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
                               barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
@@ -510,7 +507,7 @@ function drawData() {
                       })
                       .call(colorDataPoint);
 
-          function vertical_offset( point ) { return ( point[3] + 1 ) * barHeight; } 
+          function vertical_offset( point ) { return ( point[3] ) * barHeight; } 
           function text_color( point ) { return addOffset( point ) ? '#fff' : null; }
           function addOffset( point ) { return ( vertical_offset(point) > band/2); }
           
