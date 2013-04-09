@@ -32,7 +32,7 @@ define(function(){
         Data.reset();
     };
  
-    return {
+    var Data = {
         /*
             Set some data onto the specified Element via DOM property rather than via DOM attributes.
  
@@ -94,5 +94,7 @@ define(function(){
             return warehouse;
         }
     };
+
+    return Data;
  
 });
