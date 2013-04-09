@@ -1012,7 +1012,7 @@ function mouseover_fn(el,index, axis) {
   function setClassScales() {
  
     //if the class hasn't changed, don't modify it.
-    colorCategories = __.class.list.length ? _.map( __.class.list, String) : [undefined];
+    colorCategories = __.class.list.length ? _.map( __.class.list, String).sort() : [undefined];
 
     var numberOfCategories = colorCategories.length,
         colorArray = _.first(__.pointColors, numberOfCategories) || __.pointColors[0];
