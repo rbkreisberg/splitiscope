@@ -81,8 +81,8 @@ var __ = {
       scales = { x: d3.scale.ordinal(),
                 y : {}
               },
+      domainScalingFactor = 1.04,
       caseSplitsOpacityscale,
-      dragging = {},
       selected = {x: null, y: null},
       padding = { top: 24, bottom: 4, left: 30, right: 4 },
       split_data = {x: {}, y: {}},
@@ -273,7 +273,7 @@ function drawAxes() {
 function adjustTicks(axis) {
   var tickSizes = {
           "y" : [ 0, -1*plotWidth()+10 ],
-          "x" : [ 0, 0]
+          "x" : [ 0, -1*plotHeight()]
               },
       axisEl = bottom_surface.select('.' + axis + '.axis');
      
@@ -829,165 +829,176 @@ function mouseover_fn(el,index, axis) {
               return;
   }
  
-  function makeSplitSelection(el, index, axis){
-    split_data[axis].span = split_data[axis].binScale(index);
-    drawPartitionSpans();
-  }
+function makeSplitSelection(el, index, axis){
+  split_data[axis].span = split_data[axis].binScale(index);
+  drawPartitionSpans();
+}
 
-  function selectSplitValue(position, axis) {
-    var value = scales[axis].invert(position)
-    split_data[axis].span = position;
-    drawPartitionSpans();
-    updateSplitTextLabel(position, axis);
-  }
+function selectSplitValue(position, axis) {
+  var value = scales[axis].invert(position)
+  split_data[axis].span = position;
+  drawPartitionSpans();
+  updateSplitTextLabel(position, axis);
+}
 
-  function selectCategoricalSplitValue(value, axis) {
-    var domain = scales[axis].domain();
-    if (!_.contains(selected[axis], value)) selected[axis].push(value);
-    var remaining_values = _.difference( domain, selected[axis] ),
-        new_domain = _.union(selected[axis],remaining_values),
-        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / new_domain.length) ;
+function selectCategoricalSplitValue(value, axis) {
+  var domain = scales[axis].domain();
+  if (!_.contains(selected[axis], value)) selected[axis].push(value);
+  var remaining_values = _.difference( domain, selected[axis] ),
+      new_domain = _.union(selected[axis],remaining_values),
+      band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / new_domain.length) ;
 
-    scales[axis].domain(new_domain);
-    scales[axis].invert.range(new_domain);
-    
-    split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1) );
-    updateAxes();
-    drawData();
-    drawSplits();
-    drawPartitionSpans();
-  }
+  scales[axis].domain(new_domain);
+  scales[axis].invert.range(new_domain);
+  
+  split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1) );
+  updateAxes();
+  drawData();
+  drawSplits();
+  drawPartitionSpans();
+}
 
-  function removeCategoricalSplitValue(value, axis) {
-    if (!_.contains(selected[axis], value)) return;
-    
-    selected[axis] = _.difference( selected[axis], [ value ] );
-    var len = selected[axis].length
-        remaining_values = len ? _.difference( scales[axis].domain(), selected[axis] ) : scales[axis].domain(),
-        domain = len ? _.union(selected[axis],remaining_values) : remaining_values,
-        band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
-    
-    scales[axis].domain(domain);
-    scales[axis].invert.range(domain);
+function removeCategoricalSplitValue(value, axis) {
+  if (!_.contains(selected[axis], value)) return;
+  
+  selected[axis] = _.difference( selected[axis], [ value ] );
+  var len = selected[axis].length
+      remaining_values = len ? _.difference( scales[axis].domain(), selected[axis] ) : scales[axis].domain(),
+      domain = len ? _.union(selected[axis],remaining_values) : remaining_values,
+      band = ((scales[axis].rangeExtent()[1] - scales[axis].rangeExtent()[0]) / domain.length) ;
+  
+  scales[axis].domain(domain);
+  scales[axis].invert.range(domain);
 
-    split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
-        
-    updateAxes();
-    drawData();
-    drawSplits();
-    drawPartitionSpans();
-  }
+  split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
+      
+  updateAxes();
+  drawData();
+  drawSplits();
+  drawPartitionSpans();
+}
 
-  function clearAllSplitSelections() {
-    _.each(['x','y'], function(axis) {
-      selected[axis] = __.dataType[axis] === 'numerical' ? null : [];
-      clearSplitSelection(axis)
-      });
-  }
-
-  function clearSplitSelection(axis){
-      if ( _.isNull(split_data[axis].span) ) return;
-      split_data[axis].span = null;
-      drawPartitionSpans();
-      updateSplitTextLabel(null, axis);
-  }
-
-  function isCategorical(vals) {
-    if ( !_.isArray(vals)) return false; //can't handle a non-array...
-    if ( vals.length <= 6 ) return true;   // too few values
-    if ( _.some(vals, _.isString) ) return true;  // any strings?
-    return false;
-  }
-
-  function isNumerical(array) {
-    return _.all(array, _.isNumber);
-  }
-
-  function isInt(array) {
-    return _.all(array, function(n) {
-       return n % 1 === 0;
+function clearAllSplitSelections() {
+  _.each(['x','y'], function(axis) {
+    selected[axis] = __.dataType[axis] === 'numerical' ? null : [];
+    clearSplitSelection(axis)
     });
-  }
+}
 
-  function isFinite(array) {  // check if there's a terrible number (Infinity, NaN) in there
-    return !( _.some(array, !_.isFinite));
-  }
+function clearSplitSelection(axis){
+    if ( _.isNull(split_data[axis].span) ) return;
+    split_data[axis].span = null;
+    drawPartitionSpans();
+    updateSplitTextLabel(null, axis);
+}
 
-  function parseData() {
-    if (__.data.length < 1) {
-        console.log('Empty data array.  Nothing to plot.');
-        return;
-    }
+function isCategorical(vals) {
+  if ( !_.isArray(vals)) return false; //can't handle a non-array...
+  if ( vals.length <= 6 ) return true;   // too few values
+  if ( _.some(vals, _.isString) ) return true;  // any strings?
+  return false;
+}
 
-    var element_properties = _.keys(__.data[0]);
-    if ( _.contains(element_properties,  __.axes.attr.x ) && _.contains(element_properties,  __.axes.attr.y ) ) {
-      var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
-          yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
-          if (__.clear) {
-              __.dataType.x =  isCategorical( xVals ) ? 'categorical' : 'numerical';
-              __.dataType.y =  isCategorical( yVals ) ? 'categorical' : 'numerical';
-          }
-    }
-    else {
-      console.error('x or y coordinates not packaged in data');
+function isNumerical(array) {
+  return _.all(array, _.isNumber);
+}
+
+function isInt(array) {
+  return _.all(array, function(n) {
+     return n % 1 === 0;
+  });
+}
+
+function isFinite(array) {  // check if there's a terrible number (Infinity, NaN) in there
+  return !( _.some(array, !_.isFinite));
+}
+
+function parseData() {
+  if (__.data.length < 1) {
+      console.log('Empty data array.  Nothing to plot.');
       return;
-    }
-
-    data_array = __.data;
-
-    setDataScales(xVals, yVals);
-
-    return splitiscope;
-
   }
 
-  function setDataScales( xVals, yVals ) {  //unique values for each dimension
-    
-    var splits_on_x = _.pluck( data_array, 'splits_on_x' );
-
-    caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
-    var range = { 
-                "x" : [ 10, plotWidth()-10 ],
-                "y" : [ plotHeight()-10, 10 ]
-                },
-        vals = { 
-                "x" : xVals,
-                "y" : yVals
-              };
-
-    _.each(['x','y'], function( axis ) {
-        if ( __.dataType[axis] === 'categorical' ) {
-          scales[axis] = d3.scale.ordinal().domain(vals[axis].sort()).rangePoints(range[axis],1.0);
-          scales[axis].invert = d3.scale.ordinal().domain(scales[axis].range()).range(vals[axis]);
-
-          selected[axis] = [];
-        } 
-        else { 
-          scales[axis] =d3.scale.linear().domain(d3.extent(vals[axis])).rangeRound(range[axis]);
-       }
-    });
-    return setAxes();
+  var element_properties = _.keys(__.data[0]);
+  if ( _.contains(element_properties,  __.axes.attr.x ) && _.contains(element_properties,  __.axes.attr.y ) ) {
+    var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
+        yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
+        if (__.clear) {
+            __.dataType.x =  isCategorical( xVals ) ? 'categorical' : 'numerical';
+            __.dataType.y =  isCategorical( yVals ) ? 'categorical' : 'numerical';
+        }
+  }
+  else {
+    console.error('x or y coordinates not packaged in data');
+    return;
   }
 
-  function setClassScales() {
- 
-    //if the class hasn't changed, don't modify it.
-    colorCategories = __.class.list.length ? _.map( __.class.list, String).sort() : [undefined];
+  data_array = __.data;
 
-    var numberOfCategories = colorCategories.length,
-        colorArray = _.first(__.pointColors, numberOfCategories) || __.pointColors[0];
+  setDataScales(xVals, yVals);
 
-    __.categoryColor = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
+  return splitiscope;
 
-  }
+}
 
-  function setAxes() {
-    
-    axisFn["y"].scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
-    axisFn["x"].scale(scales['x']).tickSize(2).ticks(5);
+function scaleRangeValues( values, scale) {
+  var low = values[0],
+      high = values[1],
+      width = high - low || 1,
+      margin = width * (scale - 1);
+      
+      return [ low - margin, high + margin ];
+}
 
-    return splitiscope;
-  }
+function setDataScales( xVals, yVals ) {  //unique values for each dimension
+  
+  var splits_on_x = _.pluck( data_array, 'splits_on_x' );
+
+  caseSplitsOpacityscale = d3.scale.linear().domain(d3.extent(splits_on_x)).range([0.2,0.9]);
+  var range = { 
+              "x" : [ 10, plotWidth()-10 ],
+              "y" : [ plotHeight()-10, 10 ]
+              },
+      vals = { 
+              "x" : xVals,
+              "y" : yVals
+            };
+
+  _.each(['x','y'], function( axis ) {
+      if ( __.dataType[axis] === 'categorical' ) {
+        scales[axis] = d3.scale.ordinal().domain(vals[axis]).rangePoints(range[axis],1.0);
+        scales[axis].invert = d3.scale.ordinal().domain(scales[axis].range()).range(vals[axis]);
+
+        selected[axis] = [];
+      } 
+      else { 
+        var extent = d3.extent(vals[axis]),
+            scaledExtent = scaleRangeValues(extent, domainScalingFactor);
+        scales[axis] =d3.scale.linear().domain(scaledExtent).rangeRound(range[axis]);
+     }
+  });
+  return updateAxes();
+}
+
+function setClassScales() {
+
+  //if the class hasn't changed, don't modify it.
+  colorCategories = __.class.list.length ? _.map( __.class.list, String) : [undefined];
+
+  var numberOfCategories = colorCategories.length,
+      colorArray = _.first(__.pointColors, numberOfCategories) || __.pointColors[0];
+
+  __.categoryColor = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
+
+}
+
+function setAxes() {
+  
+  axisFn["y"].scale(scales['y']).tickSize(-1*plotWidth()+10).ticks(5);
+  axisFn["x"].scale(scales['x']).tickSize(2).ticks(5);
+
+  return splitiscope;
+}
 
 function parseSplits() {
   var split_bin_start, split_bin_number, split_bin_end, s;
