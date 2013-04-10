@@ -58,7 +58,7 @@ define([
             function refilter() {
                 var initial = {};
                 _.each( data_filter.columns(), function(f) { 
-                    data_filter.resetFilter();
+                    data_filter.resetFilter(f);
                     initial[f]  = { 
                         "low" : -Infinity, 
                         "high" : Infinity, 
