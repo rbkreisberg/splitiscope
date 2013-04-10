@@ -10,6 +10,37 @@ define([
              filter = {},
              group = {};
 
+//class values that should be sorted to the bottom of a list.
+        var NA = ['NA','N/A'],
+            Other = ['OTHER'],
+            //trueV = ['TRUE','T'],  //only added for readability
+            falseV = ['FALSE','F'];
+
+    function classSort(a,b) {
+        var A = String(a).toUpperCase(),
+            B = String(b).toUpperCase();
+
+            if ( !!~NA.indexOf(A) ) return 1;
+            else if ( !!~NA.indexOf(B) ) return -1;
+            else if ( !!~Other.indexOf(A) ) return 1;
+            else if ( !!~Other.indexOf(B) ) return -1;
+            else if ( !!~falseV.indexOf(A) ) return 1;
+            else if ( !!~falseV.indexOf(B) ) return -1;
+
+            return A >= B;
+    }
+
+    function sortOnAttr(key) {
+        return function(a,b) {
+            var A = a[key],
+                B = b[key];
+                return classSort(A,B);
+        };
+    }
+
+    //crossfilter unfortunately kicks out an attribute with the name "key"
+    var sortKey = sortOnAttr('key');
+
         var Filter = function(data) {
              cf_obj = crossfilter(data);
                 all = cf_obj.groupAll();
@@ -65,17 +96,17 @@ define([
                 return Filter;
             };
 
-             Filter.getGroupEntries = function( label, sorted) {
+            Filter.getGroupEntries = function( label, sorted) {
                 if ( group[label] === undefined ) return [];
                 sorted = ( sorted === undefined ) ? true : sorted;
-                if ( sorted ) return _.sortBy(group[label].top( Infinity ), 'key' );
-                return _.sortBy( group[label].top( Infinity ), 'key' );
+                if ( sorted ) return group[label].top( Infinity ).sort(sortKey);
+                return group[label].top( Infinity ).sort(sortKey);
             };
 
             Filter.getGroupLabels = function( label, sorted) {
                 if ( group[label] === undefined ) return [];
                 sorted = ( sorted === undefined ) ? true : sorted;
-                if ( sorted ) return _.pluck( group[label].top( Infinity ), 'key' ).sort();
+                if ( sorted ) return _.pluck( group[label].top( Infinity ), 'key' ).sort(classSort);
                 return _.pluck( group[label].top( Infinity ), 'key' );
             };
 
