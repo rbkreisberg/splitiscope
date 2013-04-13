@@ -16,6 +16,7 @@ require.config({
       "modernizr": "../components/modernizr",
       "queue": "../components/queue-async/queue",
       "underscore": "../components/underscore/underscore",
+      "science" : "../components/science/science.v1",
       "splitiscope": "vis/splitiscope",
       'hbs' : '../components/require-handlebars-plugin/hbs',
       'handlebars' : '../components/require-handlebars-plugin/Handlebars',
@@ -47,6 +48,9 @@ require.config({
       },
       "crossfilter": {
         "exports" : "crossfilter"
+      },
+      "science" : {
+        "exports" : "science"
       }
   },
   "hbs" : {

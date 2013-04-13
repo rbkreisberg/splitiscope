@@ -2,13 +2,12 @@
 define([
     'queue', 
     'splitiscope',
-    'crossfilter',
     'data',
     'filter',
     'hbs!templates/splititem',
     'hbs!templates/totals',
     'hbs!templates/classList',
-], function (queue, split_vis, crossfilter, warehouse, filter, splitItemTemplate, totalsItemTemplate, classListTemplate) {
+], function (queue, split_vis, warehouse, filter, splitItemTemplate, totalsItemTemplate, classListTemplate) {
     'use strict';
 
     function errorMsg(msg) {
