@@ -8,7 +8,12 @@ some code taken from
 https://github.com/syntagmatic/parallel-coordinates
 Copyright (c) 2012, Kai Chang
 */
-define(['jQuery', 'd3', 'underscore' ], function (jQuery, d3, _) {
+define([
+  'jQuery'
+  , 'd3'
+  , 'underscore'
+  ,'science' 
+  ], function (jQuery, d3, _, science) {
 
 return function(config) {
 
@@ -40,8 +45,9 @@ var __ = {
             },
     radius : 4,
     dataType : { 
-                 "x" : 'numerical',
-                 "y" : 'numerical'
+                 "x" : 'n',
+                 "y" : 'n',
+                 "mix" : 'nn'
                },
     data : {x:[],y:[], class:[] },
     splits : {},
@@ -81,10 +87,13 @@ var __ = {
       scales = { x: d3.scale.ordinal(),
                 y : {}
               },
+     kde = { x: null,
+                y : null
+              },
       domainScalingFactor = 1.04,
       caseSplitsOpacityscale,
       selected = {x: null, y: null},
-      padding = { top: 24, bottom: 4, left: 30, right: 4 },
+      padding = { top: 24, bottom: 4, left: 30, right: 24 },
       split_data = {x: {}, y: {}},
       shapes = ['square','circle','cross','diamond','triangle-down','triangle-up'],
       symbolSize = Math.pow(__.radius,2),
@@ -153,6 +162,7 @@ var __ = {
 
     data_surface = top_surface.append('g')
                     .attr('transform','translate(' + padding.left + ',' + padding.top + ')');
+    data_surface.append('g').attr('class','kde_surface');
     data_surface.append('g').attr('class','data');
     data_surface.append('g').attr('class','data_labels');
 
@@ -282,7 +292,7 @@ function adjustTicks(axis) {
   var decimalFormat = d3.format(".4r"),
        format = (isNumerical(scales[axis].domain()) && !isInt(scales[axis].domain()) ) ? decimalFormat : null;
   
-  if ( __.dataType[axis] === 'categorical' ) {
+  if ( __.dataType[axis] === 'c' ) {
 
     var ordinal = axisEl.append('g').attr('class','categorical_ticks'),
         ticks = scales[axis].range();
@@ -340,19 +350,273 @@ function updateAxisLabels() {
       x_axis.select('.axis_label').text(__.axes.labels.x);
   }
 
+function drawScatterplot(data_points) {
+
+data_points
+      .attr('d',symbolFunction(0).size(symbolSize)())
+  .transition()
+    .duration(update_duration)
+    .attr('transform', function(point) { 
+        return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
+        scales.y(point[ __.axes.attr.y ]) + ')';})
+    
+    .style('fill-opacity', function(point) {
+        return _.isUndefined(point.splits_on_x) ? 
+          0.8 : caseSplitsOpacityscale(point.splits_on_x);
+    })
+    .style('stroke-width',"0px")     
+    .call(colorDataPoint);
+
+ var data_text = data_surface.select('.data_labels')
+                    .selectAll('.data_totals')
+                    .data([], String );
+
+    data_text.exit().remove();
+
+  }
+
+function drawMultipleBarchart(data_points) {
+
+      var xInversed = {}; 
+      _.each( scales.x.domain(), function(label, index) {
+        xInversed[label] = index;
+      });
+      var yInversed = {}; 
+      _.each( scales.y.domain(), function(label, index) {
+        yInversed[label] = index;
+      });
+
+      var totalWidth = colorCategories.length * 15;
+
+      var d = {}; 
+            _.each(scales.x.domain(), function(label) { 
+              d[label] = {};
+              _.each(scales.y.domain(), function(ylabel) {
+                d[label][ylabel] = {};
+                _.each(colorCategories, function(cat) {
+                  d[label][ylabel][cat] = 0;
+                });
+              });
+            });
+
+      var stacks = scales.x.domain().length * scales.y.domain().length * colorCategories.length;
+      var e = Array.apply(null, new Array((scales.y.domain().length))).map(function() { return 0;});
+      var f = new Array(stacks);
+
+      _.each(data_array, function(point, index) {
+             e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.class.label]) ]++;
+      });
+
+      var i = stacks -1;
+
+      _.each(_.keys(d), function (k1) { 
+          _.each(_.keys(d[k1]), function(k2) { 
+              _.each(_.keys(d[k1][k2]), function(k3) {
+                      f[i--] = [k1, k2, k3, d[k1][k2][k3]];
+              });
+            });
+        });
+
+      var height_axis = 'y',
+        extent = scales[height_axis].range(),
+          band = ((scales[height_axis].rangeExtent()[1] - scales[height_axis].rangeExtent()[0]) / extent.length);
+
+      var width_axis = 'x',
+        width_extent = scales[width_axis].range(),
+          width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
+       
+      var barHeight =  (band - 25) / ( d3.max(e) + 1 ) ,
+          halfBarHeight = barHeight / 2,
+          barWidth =  ( width_band /2) / colorCategories.length,
+          halfBarWidth = barWidth / 2,
+          barSpacing = barWidth/colorCategories.length,
+          last_index = colorCategories.length -1;
+
+      function category_offset (label) {
+        if (label === "undefined") { label = undefined; }
+            position = colorCategories.indexOf( label ),
+            midpoint = last_index / 2;
+        var offset = (position  - midpoint) * (barWidth + (barSpacing * last_index));
+        return Math.round(offset);
+      } 
+
+      data_points
+                .transition()
+                  .duration(update_duration)
+                  .style('fill-opacity', 0.8)
+                  .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
+                          halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
+                          barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
+                  .attr('transform', 
+                    function(point, i) { 
+                        return 'translate(' + 
+                              (scales.x(point[__.axes.attr.x]) + category_offset(String(point[__.class.label])) ) +
+                                ',' +
+                              (scales.y(point[__.axes.attr.y] ) + band/2 - (e[i]*barHeight)) + ')';
+                  })
+                  .call(colorDataPoint);
+
+      function vertical_offset( point ) { return ( point[3] ) * barHeight; } 
+      function text_color( point ) { return addOffset( point ) ? '#fff' : null; }
+      function addOffset( point ) { return ( vertical_offset(point) > band/2); }
+      
+      function text_styling( selector, point ) {
+              selector
+                .style('stroke', null )
+                .style('fill', text_color )
+                .style('visibility', function(point) { return +point[3] <= 0 ? 'hidden' : null; } )
+                .attr('transform', function(point) { return 'translate(' + 
+                    (scales.x(point[0]) + category_offset( point[2] )) + 
+                      ',' +
+                    (scales.y(point[1]) + band/2 - vertical_offset(point) + 
+                      (addOffset(point) * 20) ) + ')'; } );
+      }
+
+      var data_text = data_surface.select('.data_labels')
+                  .selectAll('.data_totals')
+                  .data(f, String );
+                  
+      data_text.enter()
+                .append("text")
+                .attr('class','data_totals')
+                .style('text-anchor','middle')
+                .text(function(point,i){ return point[3];})
+                .attr('transform', function(point) {
+                      return 'translate(' + 
+                          (scales.x(point[0]) + category_offset( point[2] )) + 
+                            ',' +
+                          scales.y(point[1]) + ')';});
+
+      data_text.transition()
+                .duration(update_duration)
+                .call(text_styling)
+
+      data_text.exit().remove();
+
+}
+
+
+function drawMultipleKDE(data_points) {
+
+  var num_axis = __.dataType.x === 'n' ? 'x' : 'y',
+      cat_axis = num_axis === 'x' ? 'y' : 'x',
+      cat_domain = scales[cat_axis].domain(),
+      cat_extent = scales[cat_axis].range(),
+      cat_band = ((scales[cat_axis].rangeExtent()[1] - scales[cat_axis].rangeExtent()[0]) / cat_extent.length);
+      
+      var data = {};
+       _.each(cat_domain, function(d) {data[d] = sampleEstimates(kde[d]); }),
+          maxKDEValues = _.map(_.values(data), function(d) { 
+            return _.max(d, function(e) { 
+              return e[1];
+            })[1]
+          }),
+          maxKDEValue = _.max(maxKDEValues),
+          cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([0,cat_band/2]);
+          if ( cat_axis === 'y' ) cat_scale.range([cat_band/2,0]);
+
+      var kde_category = data_surface.select('.kde_surface').selectAll('g')
+          .data(cat_domain, String)
+          .enter()
+            .append('g')
+            .attr('transform',function(c) { return 'translate(' + 
+                        (cat_axis === 'y' ? '0, ' : '') + scales[cat_axis](c) +
+                        (cat_axis === 'x' ? ', 0' : '') + ')';
+            });
+
+      var kde_plot = kde_category.selectAll('.kde_plot')
+              .data(function(d) { return [data[d]];} ) ;
+
+        kde_plot.enter()
+          .append("path")
+          //Draws the second half of the violin plot
+          .attr("class","kde_plot");
+
+          kde_plot.transition()
+          .duration(update_duration)
+             .attr("d", d3.svg.line()
+              [cat_axis](function(p) { return cat_scale(p[1]); })
+              [num_axis](function(p) { return scales[num_axis](p[0])})
+             .interpolate("basis"))
+          .style("fill","none")
+          .style("stroke","black");
+
+        kde_plot.enter()
+          .append("path")
+          .attr("class","kde_plot");
+
+          kde_plot.transition()
+          .duration(update_duration)
+          .attr("d", d3.svg.area()
+                .interpolate("basis")
+                [num_axis](function(p) {return scales[num_axis](p[0]);})
+                [cat_axis+'0'](cat_scale(0))
+                [cat_axis+'1'](function(p) { return cat_scale(p[1]); })
+                )
+           .style("fill",'#13e')
+           .style('fill-opacity',0.3)
+           .style("stroke","none");   
+
+      // if (renderMedian){
+      //   g2.append("line")
+      //     .attr('class','median_line')
+      //     .attr("y1",scales.y(plotMedian))
+      //     .attr("y2",scales.y(plotMedian))
+      //     .attr("x1",0)
+      //     .attr("x2",width_band)
+      //     .style("stroke","red")
+      //     .style('stroke-width',"3");
+      // }      
+
+      data_points
+            .attr('d',symbolFunction(1).size(symbolSize)())
+          .transition()
+            .duration(update_duration)
+            .attr('transform', function(point) { 
+                return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
+                scales.y(point[ __.axes.attr.y ]) + ')';})
+            
+            .style('fill-opacity', function(point) {
+                return _.isUndefined(point.splits_on_x) ? 
+                  0.8 : caseSplitsOpacityscale(point.splits_on_x);
+            })
+            .style('stroke-width',"0px")     
+            .call(colorDataPoint);
+
+}
+
+function colorDataPoint(selector, point) {  
+  selector
+    .style('fill',function(point) {
+          return  __.categoryColor(String(point[__.class.label]));
+    })
+    .style('stroke', null);
+}
+
+function clearDataLabels() {
+  var data_text = data_surface.select('.data_labels')
+                    .selectAll('.data_totals')
+                    .data([], String );
+
+    data_text.exit().remove();
+    return;
+}
+
+function clearKDE() {
+  var kde = data_surface.select('.kde_surface').selectAll('g').data([],String);
+  kde.exit().remove();
+}
+
+function cleanDisplay() {
+  if ( __.dataType['mix'] !== 'cc' ) clearDataLabels();
+  if (__.dataType['mix'] !== 'nc' && __.dataType['mix'] !== 'cn' ) clearKDE();
+}
+
 function drawData() {
 
   var data_points = data_surface.select('.data')
     .selectAll('.data_point')
     .data(data_array, function(d) { return d[__.id]; } );
-
-  function colorDataPoint(selector, point) {  
-    selector
-      .style('fill',function(point) {
-            return  __.categoryColor(String(point[__.class.label]));
-      })
-      .style('stroke', null);
-  }
 
   data_points.enter()
       .append('path')
@@ -367,163 +631,26 @@ function drawData() {
       .style('stroke-opacity',0)
       .remove();
 
-  if (__.dataType['x'] == 'numerical' || __.dataType['y'] == 'numerical') {      
-
-  data_points
-        .attr('d',symbolFunction(0).size(symbolSize)())
-    .transition()
-      .duration(update_duration)
-      .attr('transform', function(point) { 
-          return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
-          scales.y(point[ __.axes.attr.y ]) + ')';})
-      
-      .style('fill-opacity', function(point) {
-          return _.isUndefined(point.splits_on_x) ? 
-            0.8 : caseSplitsOpacityscale(point.splits_on_x);
-      })
-      .style('stroke-width',"0px")     
-      .call(colorDataPoint);
- 
-   var data_text = data_surface.select('.data_labels')
-                      .selectAll('.data_totals')
-                      .data([], String );
-
-      data_text.exit().remove();
-
-  } else if (__.dataType['x'] !== 'numerical' && __.dataType['y'] !== 'numerical') {
-
-          var xInversed = {}; 
-          _.each( scales.x.domain(), function(label, index) {
-            xInversed[label] = index;
-          });
-          var yInversed = {}; 
-          _.each( scales.y.domain(), function(label, index) {
-            yInversed[label] = index;
-          });
-
-          var totalWidth = colorCategories.length * 15;
-
-          var d = {}; 
-                _.each(scales.x.domain(), function(label) { 
-                  d[label] = {};
-                  _.each(scales.y.domain(), function(ylabel) {
-                    d[label][ylabel] = {};
-                    _.each(colorCategories, function(cat) {
-                      d[label][ylabel][cat] = 0;
-                    });
-                  });
-                });
-
-          var stacks = scales.x.domain().length * scales.y.domain().length * colorCategories.length;
-          var e = Array.apply(null, new Array((scales.y.domain().length))).map(function() { return 0;});
-          var f = new Array(stacks);
-
-          _.each(data_array, function(point, index) {
-                 e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.class.label]) ]++;
-          });
-
-          var i = stacks -1;
-
-          _.each(_.keys(d), function (k1) { 
-              _.each(_.keys(d[k1]), function(k2) { 
-                  _.each(_.keys(d[k1][k2]), function(k3) {
-                          f[i--] = [k1, k2, k3, d[k1][k2][k3]];
-                  });
-                });
-            });
-
-          var height_axis = 'y',
-            extent = scales[height_axis].range(),
-              band = ((scales[height_axis].rangeExtent()[1] - scales[height_axis].rangeExtent()[0]) / extent.length);
-
-          var width_axis = 'x',
-            width_extent = scales[width_axis].range(),
-              width_band = ((scales[width_axis].rangeExtent()[1] - scales[width_axis].rangeExtent()[0]) / width_extent.length);
-           
-          var barHeight =  (band - 25) / ( d3.max(e) + 1 ) ,
-              halfBarHeight = barHeight / 2,
-              barWidth =  ( width_band /2) / colorCategories.length,
-              halfBarWidth = barWidth / 2,
-              barSpacing = barWidth/colorCategories.length,
-              last_index = colorCategories.length -1;
-
-          function category_offset (label) {
-            if (label === "undefined") { label = undefined; }
-                position = colorCategories.indexOf( label ),
-                midpoint = last_index / 2;
-            var offset = (position  - midpoint) * (barWidth + (barSpacing * last_index));
-            return Math.round(offset);
-          } 
-
-          data_points
-                    .transition()
-                      .duration(update_duration)
-                      .style('fill-opacity', 0.8)
-                      .attr('d', 'M 0 0 L '+ halfBarWidth +' 0 L ' + 
-                              halfBarWidth +' -' + barHeight + ' L -'+halfBarWidth +' -' + 
-                              barHeight + ' L -'+halfBarWidth+' 0 L 0 0' )
-                      .attr('transform', 
-                        function(point, i) { 
-                            return 'translate(' + 
-                                  (scales.x(point[__.axes.attr.x]) + category_offset(String(point[__.class.label])) ) +
-                                    ',' +
-                                  (scales.y(point[__.axes.attr.y] ) + band/2 - (e[i]*barHeight)) + ')';
-                      })
-                      .call(colorDataPoint);
-
-          function vertical_offset( point ) { return ( point[3] ) * barHeight; } 
-          function text_color( point ) { return addOffset( point ) ? '#fff' : null; }
-          function addOffset( point ) { return ( vertical_offset(point) > band/2); }
-          
-          function text_styling( selector, point ) {
-                  selector
-                    .style('stroke', null )
-                    .style('fill', text_color )
-                    .style('visibility', function(point) { return +point[3] <= 0 ? 'hidden' : null; } )
-                    .attr('transform', function(point) { return 'translate(' + 
-                        (scales.x(point[0]) + category_offset( point[2] )) + 
-                          ',' +
-                        (scales.y(point[1]) + band/2 - vertical_offset(point) + 
-                          (addOffset(point) * 20) ) + ')'; } );
-          }
-
-          var data_text = data_surface.select('.data_labels')
-                      .selectAll('.data_totals')
-                      .data(f, String );
-                      
-          data_text.enter()
-                    .append("text")
-                    .attr('class','data_totals')
-                    .style('text-anchor','middle')
-                    .text(function(point,i){ return point[3];})
-                    .attr('transform', function(point) {
-                          return 'translate(' + 
-                              (scales.x(point[0]) + category_offset( point[2] )) + 
-                                ',' +
-                              scales.y(point[1]) + ')';});
-
-          data_text.transition()
-                    .duration(update_duration)
-                    .call(text_styling)
-
-          data_text.exit().remove();
-
-    }
-
+  cleanDisplay();
+  
+  if (__.dataType['mix'] === 'nn') {   
+    drawScatterplot(data_points);
   }
+  else if ( ( __.dataType['x'] == 'n') ^ ( __.dataType['y'] =='n' ) ) {
+    drawMultipleKDE(data_points);
+  }
+  else if (__.dataType['mix'] === 'cc') drawMultipleBarchart(data_points);
 
-  splitiscope.resize = function() {
-      // selection size
-      // splitiscope.selection.select("svg") 
-      //   .attr("width", __.width)
-      //   .attr("height", __.height);
+}
 
-      splitiscope.svg
-              .attr('height',plotHeight())
-              .attr('width',plotWidth())
-              .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
-    return this;
-  };
+splitiscope.resize = function() {
+
+    splitiscope.svg
+            .attr('height',plotHeight())
+            .attr('width',plotWidth())
+            .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+  return this;
+};
 
 function drawSplits() {
 
@@ -531,7 +658,7 @@ function drawSplits() {
     var split_group = d3.select('.'+axis+'.split_group').node();
             if ( _.isNull(split_group) ) split_surface.append('g').attr('class','' + axis + ' split_group');
 
-            if ( __.dataType[axis] === 'numerical' ) {
+            if ( __.dataType[axis] === 'n' ) {
                 drawNumericalAxisSplits(axis);
             } else {
                 drawCategoricalAxisSplits(axis);
@@ -764,7 +891,7 @@ function drawPartitionSpans() {
                       var split_obj = {};
                       if ( !_.isNull(split_data['x'].span) ) {
                         split_obj[__.axes.attr.x] = {};
-                        if ( __.dataType.x === 'numerical' ) {
+                        if ( __.dataType.x === 'n' ) {
                           var x = {low : scales.x.invert(dims[0]), high: scales.x.invert(dims[2] + dims[0])};
                           split_obj[__.axes.attr.x] = _.clone(x);
                         } else {
@@ -775,7 +902,7 @@ function drawPartitionSpans() {
                       }
                       if (!_.isNull(split_data['y'].span)) {
                         split_obj[__.axes.attr.y] = {};
-                        if ( __.dataType.y === 'numerical' ) {
+                        if ( __.dataType.y === 'n' ) {
                           var y = {low : scales.y.invert(dims[1] + dims[3]), high: scales.y.invert(dims[1])};
                           split_obj[__.axes.attr.y] = _.clone(y);
                         } else {
@@ -880,7 +1007,7 @@ function removeCategoricalSplitValue(value, axis) {
 
 function clearAllSplitSelections() {
   _.each(['x','y'], function(axis) {
-    selected[axis] = __.dataType[axis] === 'numerical' ? null : [];
+    selected[axis] = __.dataType[axis] === 'n' ? null : [];
     clearSplitSelection(axis)
     });
 }
@@ -923,9 +1050,9 @@ function parseData() {
   if ( _.contains(element_properties,  __.axes.attr.x ) && _.contains(element_properties,  __.axes.attr.y ) ) {
     var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
         yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
-        if (__.clear) {
-            __.dataType.x =  isCategorical( xVals ) ? 'categorical' : 'numerical';
-            __.dataType.y =  isCategorical( yVals ) ? 'categorical' : 'numerical';
+        if ( __.clear ) {
+            __.dataType.x =  isCategorical( xVals ) ? 'c' : 'n';
+            __.dataType.y =  isCategorical( yVals ) ? 'c' : 'n';
         }
   }
   else {
@@ -964,11 +1091,10 @@ function setDataScales( xVals, yVals ) {  //unique values for each dimension
               "y" : yVals
             };
 
-  _.each(['x','y'], function( axis ) {
-      if ( __.dataType[axis] === 'categorical' ) {
+  _.each(['x','y'], function( axis, index ) {
+      if ( __.dataType[axis] === 'c' ) {
         scales[axis] = d3.scale.ordinal().domain(vals[axis]).rangePoints(range[axis],1.0);
         scales[axis].invert = d3.scale.ordinal().domain(scales[axis].range()).range(vals[axis]);
-
         selected[axis] = [];
       } 
       else { 
@@ -977,7 +1103,28 @@ function setDataScales( xVals, yVals ) {  //unique values for each dimension
         scales[axis] =d3.scale.linear().domain(scaledExtent).rangeRound(range[axis]);
      }
   });
+    __.dataType['mix'] = __.dataType['x'] + __.dataType['y'];
+    if ( __.dataType['mix'] ==='nc' ) createKDEdata('y','x');
+    else if ( __.dataType['mix'] ==='cn' ) createKDEdata('x','y');
+
   return updateAxes();
+}
+
+function createKDEdata( cat_axis, num_axis ) {
+  
+  //clear global
+  kde = {};
+
+  var points = [],
+          obj = {};
+
+  _.each(scales[cat_axis].domain(), function(category) {
+    obj = {};
+    obj[__.axes.attr[cat_axis]] = category;
+    points = _.pluck(_.where(__.data, obj ), __.axes.attr[num_axis]); 
+    kde[category] = science.stats.kde().sample(points).kernel(science.stats.kernel.gaussian);
+  });
+
 }
 
 function setClassScales() {
@@ -999,6 +1146,26 @@ function setAxes() {
 
   return splitiscope;
 }
+
+function sampleEstimates(kde){
+    var newPoints = [];
+    var data= kde.sample();
+    if (data === undefined) { return [];}
+    if (data.length < 4) { 
+      data.forEach(function(point) { point = [point,0];});
+      return data; 
+    }
+  
+    var variance = science.stats.variance(data);
+    var extent = d3.extent(data);
+    var dataSize = extent[1] - extent[0];
+    if (variance > dataSize){ variance = dataSize;}
+    var stepSize = variance / 100;
+    //Filters the data down to relevant points
+    //20 points over two variances
+    newPoints = d3.range(d3.min(data)-stepSize,d3.max(data)+stepSize,stepSize);
+    return kde(newPoints);
+  }
 
 function parseSplits() {
   var split_bin_start, split_bin_number, split_bin_end, s;
