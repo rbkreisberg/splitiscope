@@ -100,13 +100,23 @@ define([
                 
                 var $trash = $( '#trash, #trash i, #trash div') ;
 
-                $( split_list ).on('click', split_item, function(e,ui) {
+                $('#switch_axes').on('click', function (e,ui) {
+                    var x = $('#x_autocomplete').val();
+                    $('#x_autocomplete').val( $('#y_autocomplete').val() );
+                    $('#y_autocomplete').val( x );
+                    labels['y'] = x;
+                    labels['x'] = $('#x_autocomplete').val();
+                    updateSplitiscope();
+
+                });
+
+                $( split_list ).on('click', split_item, function (e,ui) {
                     $(this).removeClass(split_item_class).addClass(split_item_class_disabled);
                     refilter();
                     refreshDisplays();
                 });
 
-                $( split_list ).on('click', split_item_disabled, function(e,ui) {
+                $( split_list ).on('click', split_item_disabled, function (e,ui) {
                     $(this).removeClass(split_item_class_disabled).addClass(split_item_class);
                     refilter();
                     refreshDisplays();

@@ -1,4 +1,4 @@
-require(['app', 'jQuery', 'backbone', 'jQuery-ui'], function (app, $, Backbone) {
+require(['app', 'jQuery', 'jQuery-ui'], function (app, $) {
     'use strict';
     app.initialize();
     // console.log(app);

@@ -11,7 +11,7 @@ require.config({
       "jQuery": "../components/jquery/jquery",
       "jQuery-ui": "../components/jquery-ui/ui/jquery-ui.custom",
       "bootstrap": "vendor/bootstrap",
-      "backbone": "../components/backbone/backbone",
+      //"backbone": "../components/backbone/backbone",
       "d3": "../components/d3/d3",
       "modernizr": "../components/modernizr",
       "queue": "../components/queue-async/queue",

@@ -90,6 +90,7 @@ var __ = {
      kde = { x: null,
                 y : null
               },
+      min_uniq_points = 6,
       domainScalingFactor = 1.04,
       caseSplitsOpacityscale,
       selected = {x: null, y: null},
@@ -403,15 +404,15 @@ function drawMultipleBarchart(data_points) {
       var e = Array.apply(null, new Array((scales.y.domain().length))).map(function() { return 0;});
       var f = new Array(stacks);
 
-      _.each(data_array, function(point, index) {
+      _.each(data_array, function (point, index) {
              e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.class.label]) ]++;
       });
 
       var i = stacks -1;
 
       _.each(_.keys(d), function (k1) { 
-          _.each(_.keys(d[k1]), function(k2) { 
-              _.each(_.keys(d[k1][k2]), function(k3) {
+          _.each(_.keys(d[k1]), function (k2) { 
+              _.each(_.keys(d[k1][k2]), function (k3) {
                       f[i--] = [k1, k2, k3, d[k1][k2][k3]];
               });
             });
@@ -500,88 +501,127 @@ function drawMultipleKDE(data_points) {
 
   var num_axis = __.dataType.x === 'n' ? 'x' : 'y',
       cat_axis = num_axis === 'x' ? 'y' : 'x',
-      cat_domain = scales[cat_axis].domain(),
+      cat_domain = _.map(scales[cat_axis].domain(), String),
       cat_extent = scales[cat_axis].range(),
-      cat_band = ((scales[cat_axis].rangeExtent()[1] - scales[cat_axis].rangeExtent()[0]) / cat_extent.length);
+      cat_band = ((scales[cat_axis].rangeExtent()[1] - scales[cat_axis].rangeExtent()[0]) / cat_extent.length),
+      cat_scale = d3.scale.linear(), 
+      maxKDEValues,maxKDEValue,
+      tally_scale = d3.scale.linear(), 
+      maxTallyValue;
       
-      var data = {};
-       _.each(cat_domain, function(d) {data[d] = sampleEstimates(kde[d]); }),
-          maxKDEValues = _.map(_.values(data), function(d) { 
-            return _.max(d, function(e) { 
-              return e[1];
-            })[1]
-          }),
-          maxKDEValue = _.max(maxKDEValues),
-          cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([0,cat_band/2]);
-          if ( cat_axis === 'y' ) cat_scale.range([cat_band/2,0]);
+  var data = {},
+      kde_categories = _.filter(_.keys(kde), function(c) { return _.isFunction(kde[c]); }),
+      tally_categories = _.filter(_.keys(kde), function(c) { return !_.isFunction(kde[c]) && kde[c].length; });
+ 
+  if ( kde_categories.length ) {  
+    _.each(kde_categories, function(d) {data[d] = sampleEstimates(kde[d]); });
+    maxKDEValues = _.map(_.values(data), function(d) { 
+          return _.max(d, function(e) { 
+            return e[1];
+          })[1]
+     }),
+    maxKDEValue = _.max(maxKDEValues),
+    cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([0,cat_band/2]);
+    if ( cat_axis === 'y' ) cat_scale.range([cat_band/2,0]);
+  }
 
-      var kde_category = data_surface.select('.kde_surface').selectAll('g')
-          .data(cat_domain, String)
-          .enter()
-            .append('g')
-            .attr('transform',function(c) { return 'translate(' + 
-                        (cat_axis === 'y' ? '0, ' : '') + scales[cat_axis](c) +
-                        (cat_axis === 'x' ? ', 0' : '') + ')';
-            });
+  if ( tally_categories.length )  {
+    maxTallyVal = _.max( _.union(_.pick(kde, tally_categories)), function(d) {return d["tally"];}),
+    tally_scale = d3.scale.linear().domain([0,maxTallyVal]).range([0,cat_band/2]);
+    if ( cat_axis === 'y' ) tally_scale.range([cat_band/2,0]);
+  }
 
-      var kde_plot = kde_category.selectAll('.kde_plot')
-              .data(function(d) { return [data[d]];} ) ;
+  var kde_category = data_surface.select('.kde_surface').selectAll('.kde_group')
+      .data(kde_categories, String);
+      
+      kde_category.enter()
+        .append('g')
+        .attr('class','kde_group')
 
-        kde_plot.enter()
-          .append("path")
-          //Draws the second half of the violin plot
-          .attr("class","kde_plot");
+        kde_category.transition()
+        .duration(update_duration)
+        .attr('transform',function(c) { return 'translate(' + 
+                    (cat_axis === 'y' ? '0, ' : '') + scales[cat_axis](c) +
+                    (cat_axis === 'x' ? ', 0' : '') + ')';
+        });
 
-          kde_plot.transition()
-          .duration(update_duration)
-             .attr("d", d3.svg.line()
-              [cat_axis](function(p) { return cat_scale(p[1]); })
-              [num_axis](function(p) { return scales[num_axis](p[0])})
-             .interpolate("basis"))
-          .style("fill","none")
-          .style("stroke","black");
+  var kde_plot = kde_category.selectAll('.kde_plot')
+          .data(function(d) { return [data[d]];}, function() { return __.axes.attr[cat_axis];} );
 
-        kde_plot.enter()
-          .append("path")
-          .attr("class","kde_plot");
+  var g = kde_plot.enter()
+        .append('g')
+        .attr("class","kde_plot");
 
-          kde_plot.transition()
-          .duration(update_duration)
-          .attr("d", d3.svg.area()
-                .interpolate("basis")
-                [num_axis](function(p) {return scales[num_axis](p[0]);})
-                [cat_axis+'0'](cat_scale(0))
-                [cat_axis+'1'](function(p) { return cat_scale(p[1]); })
-                )
-           .style("fill",'#13e')
-           .style('fill-opacity',0.3)
-           .style("stroke","none");   
+      g.append("path").attr("class","kde_line");
+      g.append('path').attr("class","kde_area");
 
-      // if (renderMedian){
-      //   g2.append("line")
-      //     .attr('class','median_line')
-      //     .attr("y1",scales.y(plotMedian))
-      //     .attr("y2",scales.y(plotMedian))
-      //     .attr("x1",0)
-      //     .attr("x2",width_band)
-      //     .style("stroke","red")
-      //     .style('stroke-width',"3");
-      // }      
+      kde_plot.transition().select('.kde_line')
+      .duration(update_duration)
+         .attr("d", d3.svg.line()
+          [cat_axis](function(p) { return cat_scale(p[1]); })
+          [num_axis](function(p) { return scales[num_axis](p[0])})
+         .interpolate("basis"))
+      .style("fill","none")
+      .style("stroke","black");
 
-      data_points
-            .attr('d',symbolFunction(1).size(symbolSize)())
-          .transition()
-            .duration(update_duration)
-            .attr('transform', function(point) { 
-                return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
-                scales.y(point[ __.axes.attr.y ]) + ')';})
-            
-            .style('fill-opacity', function(point) {
-                return _.isUndefined(point.splits_on_x) ? 
-                  0.8 : caseSplitsOpacityscale(point.splits_on_x);
-            })
-            .style('stroke-width',"0px")     
-            .call(colorDataPoint);
+      kde_plot.transition().select('.kde_area')
+      .duration(update_duration)
+      .attr("d", d3.svg.area()
+            .interpolate("basis")
+            [num_axis](function(p) {return scales[num_axis](p[0]);})
+            [cat_axis+'0'](cat_scale(0))
+            [cat_axis+'1'](function(p) { return cat_scale(p[1]); })
+            )
+       .style("fill",'#13e')
+       .style('fill-opacity',0.3)
+       .style("stroke","none");   
+
+    kde_plot.exit().remove();
+    kde_category.exit().remove();
+
+  var tally_category = data_surface.selectAll('.tally_group')
+      .data(tally_categories, String);
+  
+  tally_category.enter()
+      .append('g')
+      .attr('class','tally_group');  
+
+  var tally_plot = tally_category.selectAll('.tally_plot')
+          .data(function(d) { return kde[d];}, function() { return __.axes.attr[cat_axis];} );
+
+  tally_plot.enter()
+      .append("path")
+      .attr("class","tally_sympbol")
+      .attr('d',symbolFunction(1).size(symbolSize*2)());
+
+  tally_plot.transition()
+  .duration(update_duration)
+  .attr('transform', function(point) {
+   return 'translate('
+     + (scales.x(point[__.axes.attr.x]) + ( __.axes.attr[cat_axis] === 'x' ? tally_scale(point["tally"]) : 0) )
+    + ','
+       + (scales.y(point[ __.axes.attr.y ]) + ( __.axes.attr[cat_axis] === 'y' ? tally_scale(point["tally"]) : 0) ) 
+       + ')';
+    })
+   .call(colorDataPoint)
+
+  tally_category.exit().remove();
+  tally_plot.exit().remove();
+
+  data_points
+        .attr('d',symbolFunction(0).size(symbolSize)())
+      .transition()
+        .duration(update_duration)
+        .attr('transform', function(point) { 
+            return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
+            scales.y(point[ __.axes.attr.y ]) + ')';})
+        
+        .style('fill-opacity', function(point) {
+            return _.isUndefined(point.splits_on_x) ? 
+              0.8 : caseSplitsOpacityscale(point.splits_on_x);
+        })
+        .style('stroke-width',"0px")     
+        .call(colorDataPoint);
 
 }
 
@@ -1021,7 +1061,7 @@ function clearSplitSelection(axis){
 
 function isCategorical(vals) {
   if ( !_.isArray(vals)) return false; //can't handle a non-array...
-  if ( vals.length <= 6 ) return true;   // too few values
+  if ( vals.length <= min_uniq_points ) return true;   // too few values
   if ( _.some(vals, _.isString) ) return true;  // any strings?
   return false;
 }
@@ -1050,10 +1090,10 @@ function parseData() {
   if ( _.contains(element_properties,  __.axes.attr.x ) && _.contains(element_properties,  __.axes.attr.y ) ) {
     var xVals = _.uniq(_.pluck(__.data, __.axes.attr.x ) ),
         yVals = _.uniq(_.pluck(__.data,  __.axes.attr.y ) );
-        if ( __.clear ) {
+        
             __.dataType.x =  isCategorical( xVals ) ? 'c' : 'n';
             __.dataType.y =  isCategorical( yVals ) ? 'c' : 'n';
-        }
+        
   }
   else {
     console.error('x or y coordinates not packaged in data');
@@ -1099,7 +1139,7 @@ function setDataScales( xVals, yVals ) {  //unique values for each dimension
       } 
       else { 
         var extent = d3.extent(vals[axis]),
-            scaledExtent = scaleRangeValues(extent, domainScalingFactor);
+        scaledExtent = scaleRangeValues(extent, domainScalingFactor);
         scales[axis] =d3.scale.linear().domain(scaledExtent).rangeRound(range[axis]);
      }
   });
@@ -1116,13 +1156,41 @@ function createKDEdata( cat_axis, num_axis ) {
   kde = {};
 
   var points = [],
+      kde_points = [],
           obj = {};
 
   _.each(scales[cat_axis].domain(), function(category) {
     obj = {};
     obj[__.axes.attr[cat_axis]] = category;
-    points = _.pluck(_.where(__.data, obj ), __.axes.attr[num_axis]); 
-    kde[category] = science.stats.kde().sample(points).kernel(science.stats.kernel.gaussian);
+    kde_points = _.where(__.data, obj );
+    points = _.pluck( kde_points, __.axes.attr[num_axis]);
+    //initialize d hash to count totals for num_axis value for each color category
+    var d = {};
+    if ( _.uniq(points).length <= min_uniq_points ) {
+      _.each(_.uniq(points), function (p) {
+          d[p] = {};
+        _.each(colorCategories, function (c) {
+            d[p][c] = 0;
+        });
+      });
+
+      _.each(kde_points, function (point, index) {
+             d[ point[ __.axes.attr[ num_axis ] ] ] [ String(point[__.class.label]) ]++;
+      });
+
+      kde[category] = [];
+
+      _.each(_.keys(d), function (num) {  
+        _.each(_.keys(d[num]), function (c) {
+          var obj = { "tally" : d[num][c] };
+          obj[__.axes.attr[ cat_axis ]] = category;
+          obj[__.axes.attr[ num_axis ]] = num;
+          obj[ __.class.label ] = c;
+          kde[category].push(obj);
+        });
+      });
+    }
+    else kde[category] = science.stats.kde().sample(points).kernel(science.stats.kernel.gaussian);
   });
 
 }
@@ -1147,20 +1215,22 @@ function setAxes() {
   return splitiscope;
 }
 
+//returns an empty array if kde cannot be calculated
 function sampleEstimates(kde){
     var newPoints = [];
     var data= kde.sample();
     if (data === undefined) { return [];}
-    if (data.length < 4) { 
+    if (data.length <= 6 || _.uniq(data).length <= min_uniq_points ) { 
       data.forEach(function(point) { point = [point,0];});
       return data; 
     }
+    if ( science.stats.iqr(data) === 0 ) return [];
   
     var variance = science.stats.variance(data);
     var extent = d3.extent(data);
     var dataSize = extent[1] - extent[0];
-    if (variance > dataSize){ variance = dataSize;}
-    var stepSize = variance / 100;
+    //if (variance > dataSize){ variance = dataSize;}
+    var stepSize = dataSize / 100;
     //Filters the data down to relevant points
     //20 points over two variances
     newPoints = d3.range(d3.min(data)-stepSize,d3.max(data)+stepSize,stepSize);
