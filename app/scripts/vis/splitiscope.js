@@ -521,24 +521,24 @@ function drawMultipleKDE(data_points) {
           })[1]
      }),
     maxKDEValue = _.max(maxKDEValues),
-    cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([0,cat_band/2]);
-    if ( cat_axis === 'y' ) cat_scale.range([cat_band/2,0]);
+    cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([-1*cat_band/2+10,cat_band/2-10]);
+    if ( cat_axis === 'y' ) cat_scale.range([cat_band/2-10,-1*cat_band/2+10]);
   }
 
   if ( tally_categories.length )  {
-    maxTallyVal = _.max( _.union(_.pick(kde, tally_categories)), function(d) {return d["tally"];}),
-    tally_scale = d3.scale.linear().domain([0,maxTallyVal]).range([0,cat_band/2]);
-    if ( cat_axis === 'y' ) tally_scale.range([cat_band/2,0]);
+    maxTallyVal = _.max( _.flatten(_.values(_.pick(kde,tally_categories))), function(d) {return d["tally"];})["tally"],
+    tally_scale = d3.scale.linear().domain([0,maxTallyVal]).range([-1*cat_band/2+10,cat_band/2-10]);
+    if ( cat_axis === 'y' ) tally_scale.range([cat_band/2-10,-1*cat_band/2+10]);
   }
 
   var kde_category = data_surface.select('.kde_surface').selectAll('.kde_group')
       .data(kde_categories, String);
       
-      kde_category.enter()
+  kde_category.enter()
         .append('g')
         .attr('class','kde_group')
 
-        kde_category.transition()
+  kde_category.transition()
         .duration(update_duration)
         .attr('transform',function(c) { return 'translate(' + 
                     (cat_axis === 'y' ? '0, ' : '') + scales[cat_axis](c) +
@@ -579,49 +579,58 @@ function drawMultipleKDE(data_points) {
     kde_plot.exit().remove();
     kde_category.exit().remove();
 
-  var tally_category = data_surface.selectAll('.tally_group')
+  var tally_category = data_surface.select('.kde_surface').selectAll('.tally_group')
       .data(tally_categories, String);
   
   tally_category.enter()
       .append('g')
       .attr('class','tally_group');  
 
-  var tally_plot = tally_category.selectAll('.tally_plot')
-          .data(function(d) { return kde[d];}, function() { return __.axes.attr[cat_axis];} );
+  var tally_mark = tally_category.selectAll('.tally_mark')
+          .data(function(d) { return kde[d];}, function(tally) { return tally[__.axes.attr[cat_axis]] + '_' + tally[__.axes.attr[num_axis]] + '_' + tally[__.class.label];} );
 
-  tally_plot.enter()
-      .append("path")
+  var tally_enter = tally_mark.enter()
+          .append('g')
+          .attr('class','tally_mark');
+
+  tally_enter.append("path")
       .attr("class","tally_sympbol")
-      .attr('d',symbolFunction(1).size(symbolSize*2)());
+      .attr('d',function(t) { return symbolFunction(1).size(symbolSize+t["tally"])();})
+      .call(colorDataPoint);
 
-  tally_plot.transition()
-  .duration(update_duration)
-  .attr('transform', function(point) {
-   return 'translate('
-     + (scales.x(point[__.axes.attr.x]) + ( __.axes.attr[cat_axis] === 'x' ? tally_scale(point["tally"]) : 0) )
-    + ','
-       + (scales.y(point[ __.axes.attr.y ]) + ( __.axes.attr[cat_axis] === 'y' ? tally_scale(point["tally"]) : 0) ) 
-       + ')';
-    })
-   .call(colorDataPoint)
+  tally_enter.append('text')
+        .attr('class','tally_text')
+        .text(function(t) { return '' + t["tally"];})
+         .attr('transform','translate(5,5)');
+  
+  tally_mark.transition()
+      .duration(update_duration)
+        .attr('transform', function(point) {
+           return 'translate('
+             + (scales.x(point[__.axes.attr.x]) + ( cat_axis === 'x' ? tally_scale(point["tally"]) : 0) )
+            + ','
+               + (scales.y(point[ __.axes.attr.y ]) + ( cat_axis === 'y' ? tally_scale(point["tally"]) : 0) ) 
+               + ')';
+            });
 
+ 
   tally_category.exit().remove();
-  tally_plot.exit().remove();
+  tally_mark.exit().remove();
 
-  data_points
-        .attr('d',symbolFunction(0).size(symbolSize)())
-      .transition()
-        .duration(update_duration)
-        .attr('transform', function(point) { 
-            return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
-            scales.y(point[ __.axes.attr.y ]) + ')';})
+  // data_points
+  //       .attr('d',symbolFunction(0).size(symbolSize)())
+  //     .transition()
+  //       .duration(update_duration)
+  //       .attr('transform', function(point) { 
+  //           return 'translate(' + scales.x(point[__.axes.attr.x]) + ',' +
+  //           scales.y(point[ __.axes.attr.y ]) + ')';})
         
-        .style('fill-opacity', function(point) {
-            return _.isUndefined(point.splits_on_x) ? 
-              0.8 : caseSplitsOpacityscale(point.splits_on_x);
-        })
-        .style('stroke-width',"0px")     
-        .call(colorDataPoint);
+  //       .style('fill-opacity', function(point) {
+  //           return _.isUndefined(point.splits_on_x) ? 
+  //             0.8 : caseSplitsOpacityscale(point.splits_on_x);
+  //       })
+  //       .style('stroke-width',"0px")     
+  //       .call(colorDataPoint);
 
 }
 
@@ -631,6 +640,13 @@ function colorDataPoint(selector, point) {
           return  __.categoryColor(String(point[__.class.label]));
     })
     .style('stroke', null);
+}
+
+
+function clearDataPoints() {
+  var data_points = data_surface.select('.data').selectAll('.data_point').data([],String);
+    data_points.exit().remove();
+    return;
 }
 
 function clearDataLabels() {
@@ -650,6 +666,7 @@ function clearKDE() {
 function cleanDisplay() {
   if ( __.dataType['mix'] !== 'cc' ) clearDataLabels();
   if (__.dataType['mix'] !== 'nc' && __.dataType['mix'] !== 'cn' ) clearKDE();
+  if (__.dataType['mix'] !== 'nn' && __.dataType['mix'] !== 'cc' ) clearDataPoints();
 }
 
 function drawData() {
@@ -1127,8 +1144,8 @@ function setDataScales( xVals, yVals ) {  //unique values for each dimension
               "y" : [ plotHeight()-10, 10 ]
               },
       vals = { 
-              "x" : xVals,
-              "y" : yVals
+              "x" : xVals.sort(),
+              "y" : yVals.sort().reverse()
             };
 
   _.each(['x','y'], function( axis, index ) {
