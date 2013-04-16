@@ -67,7 +67,7 @@ define([
             Filter.addColumn = function( label , property ) { //property is optional
                 if  ( arguments.length < 2 ) property = label;
                 if (Filter.has(label)) return Filter;
-                filter[label] = cf_obj.dimension(function(d) { return d[property]; });
+                filter[label] = cf_obj.dimension( function (d) { return d[property]; });
                 return Filter;
             };
 
@@ -83,7 +83,7 @@ define([
                 if ( !Filter.has(label) ) Filter.addColumn( label );
                 if ( range.length != 2 || !(_.all(range,_.isNumber))  ) { 
                     // a set of categorical values
-                    filter[label].filterFunction(function(val) { return _.contains(range, val ); } );
+                    filter[label].filterFunction( function (val) { return _.contains(range, val ); } );
                 } else { 
                     // a low, high pair
                      filter[label].filterRange( _.map([range[0], range[1]], parseFloat) );

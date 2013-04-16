@@ -191,7 +191,8 @@ define([
                 classLabel: labels.class,
                 classList: group
             }));
-        };
+        } else { $('#classInfo').html(""); }
+
     }
 
     function updateSplitiscope() {
@@ -252,6 +253,12 @@ define([
             labels[attr] = ui.item.value;
           });
         });
+
+       $('#class_autocomplete_cancel').on('click', function (e, ui) {
+            labels['class'] = null;
+            $('#class_autocomplete').val("");
+            refreshDisplays();       
+      });
     }
 
     selectElementHooks();
