@@ -10,6 +10,12 @@
     shape-rendering: crispEdges;
 }
 
+.kde_line {
+    shape-rendering: none;
+    stroke-width: 1.5px;
+    visibility: hidden;
+}
+
 .y.axis path, .y.axis line{
     stroke:#aaa;
 }
