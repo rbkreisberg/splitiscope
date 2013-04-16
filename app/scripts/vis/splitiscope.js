@@ -284,7 +284,7 @@ function drawAxes() {
 function adjustTicks(axis) {
   var tickSizes = {
           "y" : [ 0, -1*plotWidth()+10 ],
-          "x" : [ 0, -1*plotHeight()]
+          "x" : [ 0, 0]//-1*plotHeight()]
               },
       axisEl = bottom_surface.select('.' + axis + '.axis');
      
@@ -519,16 +519,16 @@ function drawMultipleKDE(data_points) {
           return _.max(d, function(e) { 
             return e[1];
           })[1]
-     }),
-    maxKDEValue = _.max(maxKDEValues),
-    cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([-1*cat_band/2+10,cat_band/2-10]);
-    if ( cat_axis === 'y' ) cat_scale.range([cat_band/2-10,-1*cat_band/2+10]);
+     });
+    maxKDEValue = _.max(maxKDEValues);
+    cat_scale = d3.scale.linear().domain([0,maxKDEValue]).range([-1*cat_band/2,cat_band/2-10]);
+    if ( cat_axis === 'y' ) cat_scale.range([cat_band/2,-1*cat_band/2+10]);
   }
 
   if ( tally_categories.length )  {
-    maxTallyVal = _.max( _.flatten(_.values(_.pick(kde,tally_categories))), function(d) {return d["tally"];})["tally"],
-    tally_scale = d3.scale.linear().domain([0,maxTallyVal]).range([-1*cat_band/2+10,cat_band/2-10]);
-    if ( cat_axis === 'y' ) tally_scale.range([cat_band/2-10,-1*cat_band/2+10]);
+    maxTallyVal = _.max( _.flatten(_.values(_.pick(kde,tally_categories))), function(d) {return d["tally"];})["tally"];
+    tally_scale = d3.scale.linear().domain([0,maxTallyVal]).range([-1*cat_band/2,cat_band/2-10]);
+    if ( cat_axis === 'y' ) tally_scale.range([cat_band/2,-1*cat_band/2+10]);
   }
 
   var kde_category = data_surface.select('.kde_surface').selectAll('.kde_group')
@@ -552,32 +552,35 @@ function drawMultipleKDE(data_points) {
         .append('g')
         .attr("class","kde_plot");
 
-      g.append("path").attr("class","kde_line");
-      g.append('path').attr("class","kde_area");
+  g.append("path")
+      .attr("class","kde_line")
+      .style("fill","none")
+      .style("stroke","black");
 
-      kde_plot.transition().select('.kde_line')
+  g.append('path')
+      .attr("class","kde_area")
+      .style("fill",'#13e')
+      .style('fill-opacity',0.3)
+      .style("stroke","none")
+
+  kde_plot.transition().select('.kde_line')
       .duration(update_duration)
          .attr("d", d3.svg.line()
           [cat_axis](function(p) { return cat_scale(p[1]); })
           [num_axis](function(p) { return scales[num_axis](p[0])})
-         .interpolate("basis"))
-      .style("fill","none")
-      .style("stroke","black");
+         .interpolate("basis"));      
 
-      kde_plot.transition().select('.kde_area')
+  kde_plot.transition().select('.kde_area')
       .duration(update_duration)
       .attr("d", d3.svg.area()
             .interpolate("basis")
             [num_axis](function(p) {return scales[num_axis](p[0]);})
             [cat_axis+'0'](cat_scale(0))
             [cat_axis+'1'](function(p) { return cat_scale(p[1]); })
-            )
-       .style("fill",'#13e')
-       .style('fill-opacity',0.3)
-       .style("stroke","none");   
+            );   
 
-    kde_plot.exit().remove();
-    kde_category.exit().remove();
+  kde_plot.exit().remove();
+  kde_category.exit().remove();
 
   var tally_category = data_surface.select('.kde_surface').selectAll('.tally_group')
       .data(tally_categories, String);
@@ -595,24 +598,23 @@ function drawMultipleKDE(data_points) {
 
   tally_enter.append("path")
       .attr("class","tally_sympbol")
-      .attr('d',function(t) { return symbolFunction(1).size(symbolSize+t["tally"])();})
+      .attr('d',function (t) { return symbolFunction(1).size(symbolSize+t["tally"])();})
       .call(colorDataPoint);
 
   tally_enter.append('text')
         .attr('class','tally_text')
-        .text(function(t) { return '' + t["tally"];})
-         .attr('transform','translate(5,5)');
+        .text(function (t) { return '' + t["tally"]; })
+         .attr('transform','translate(5,-5)');
   
   tally_mark.transition()
       .duration(update_duration)
-        .attr('transform', function(point) {
+        .attr('transform', function (point) {
            return 'translate('
              + (scales.x(point[__.axes.attr.x]) + ( cat_axis === 'x' ? tally_scale(point["tally"]) : 0) )
             + ','
                + (scales.y(point[ __.axes.attr.y ]) + ( cat_axis === 'y' ? tally_scale(point["tally"]) : 0) ) 
                + ')';
             });
-
  
   tally_category.exit().remove();
   tally_mark.exit().remove();
@@ -1203,7 +1205,7 @@ function createKDEdata( cat_axis, num_axis ) {
           obj[__.axes.attr[ cat_axis ]] = category;
           obj[__.axes.attr[ num_axis ]] = num;
           obj[ __.class.label ] = c;
-          kde[category].push(obj);
+          if ( d[num][c] ) kde[category].push(obj);
         });
       });
     }
