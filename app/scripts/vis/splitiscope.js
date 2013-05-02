@@ -598,6 +598,14 @@ function colorDataPoint(selector, point) {
     .style('fill',function(point) {
           return  __.categoryColor(String(point[__.class.label]));
     })
+    .style('fill-opacity', function(point) {
+      if (point[__.class.label]  === __.class.highlight) console.log(point[__.class.label] + ' ' + __.class.highlight);
+      return (_.isString(__.class.highlight) ? 
+              (point[__.class.label]  === __.class.highlight ? 
+                  1.0 : 
+                  0.3) : 
+                  null);
+      })
     .style('stroke', null);
   return selector;
 }

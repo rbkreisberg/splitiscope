@@ -27,7 +27,8 @@ define([
 
             var keys, data, data_filter,
                 labels = {"x" : "", "y" : ""},
-                group = {};
+                group = {},
+                highlight_label = null;
 
             function modify_data(property, arr) {
                 _.each(arr, function(element) {
@@ -99,6 +100,31 @@ define([
              function jquery_hooks() {
                 
                 var $trash = $( '#trash, #trash i, #trash div') ;
+
+                $('#classInfo').on('mouseover', '.classItem', function () {
+                    var classLabel = $(this).attr('data-class-label');
+                    $('.classItem:not([data-class-label=\"' + classLabel+'\"])').css('opacity',0.3);
+                    highlight_label = classLabel;
+                    splitiscope
+                        .class({
+                                label : labels.class ? labels.class : '',
+                                list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
+                                highlight : highlight_label
+                            })
+                    .render();
+                });
+
+                $('#classInfo').on('mouseout', '.classItem', function () {
+                    $('.classItem').css('opacity', '');
+                    highlight_label = null;
+                    splitiscope
+                        .class({
+                                label : labels.class ? labels.class : '',
+                                list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
+                                highlight : highlight_label
+                            })
+                    .render();
+                });
 
                 $('#switch_axes').on('click', function (e,ui) {
                     var x = $('#x_autocomplete').val();
@@ -203,7 +229,8 @@ define([
         })
         .class({
             label : labels.class ? labels.class : '',
-            list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : []
+            list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
+            highlight : highlight_label
         })
         .data(data_filter.getRows())
         .render();

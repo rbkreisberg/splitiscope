@@ -2,14 +2,13 @@
 <br/>
 <table id="classList" class="unstyled">
 {{#each classList}}}
-<tr class="classItem">
+<tr class="classItem" data-class-label="{{key}}">
 <td style="text-align:right">
-<span  
+<span 
 {{#if color}}
- style="color: {{color}};"
+style="color: {{color}};"
 {{/if}}
->{{key}}
-</span>
+>{{key}}</span>
 </td>
 <td><span 
 {{#if color}}
