@@ -167,7 +167,10 @@ var __ = {
     data_surface.append('g').attr('class','data');
     data_surface.append('g').attr('class','data_labels');
 
-            return splitiscope;
+    //initialize colorBy class variables
+    setClassScales();
+
+    return splitiscope;
   };
 
   splitiscope.toString = function() { return "Splitiscope: (" + d3.keys(__.data[0]).length + " total) , " + __.data.length + " rows"; };
