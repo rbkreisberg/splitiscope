@@ -181,7 +181,7 @@ define([
             total : data_filter.currentSize()
         }));
 
-        var color = splitiscope.categoryColor();
+        var color = splitiscope.colorFn();
         if ( data_filter.has(labels.class) ) {
             var group = _.map( data_filter.getGroupEntries( labels.class ), function(group_obj) {
                 group_obj.color = color(group_obj.key);
@@ -201,7 +201,7 @@ define([
             "attr" : labels,
             "labels" : labels 
         })
-        .class({
+        .colorBy({
             label : labels.class ? labels.class : '',
             list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : []
         })
@@ -212,7 +212,7 @@ define([
     function newSplitiscope() {
         splitiscope
         .clear(true)
-        .class({
+        .colorBy({
             label : labels.class ? labels.class : '',
             list : data_filter.has( labels.class ) ? data_filter.getGroupLabels( labels.class ) : []
         })
