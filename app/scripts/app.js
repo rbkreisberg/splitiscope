@@ -106,7 +106,7 @@ define([
                     $('.classItem:not([data-class-label=\"' + classLabel+'\"])').css('opacity',0.3);
                     highlight_label = classLabel;
                     splitiscope
-                        .class({
+                        .colorBy({
                                 label : labels.class ? labels.class : '',
                                 list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
                                 highlight : highlight_label
@@ -118,7 +118,7 @@ define([
                     $('.classItem').css('opacity', '');
                     highlight_label = null;
                     splitiscope
-                        .class({
+                        .colorBy({
                                 label : labels.class ? labels.class : '',
                                 list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
                                 highlight : highlight_label
