@@ -18,11 +18,9 @@ define([
 return function(config) {
 
 var config = config || {};
-//defaults
-var __ = {
-        width : 500,
-    height : 400,
-    pointColors : [
+
+// useful defaults
+var  pointColors = [
                     "#71C560",
                     "#9768C4",
                     "#98B8B8",
@@ -30,12 +28,17 @@ var __ = {
                     "#C1B14C",
                     "#B55381"
             ],
-    partitionColors : [
+    partitionColors = [
                     "#98B8B8",  
                     "#4F473D",
                     "#C1B14C",
                     "#B55381"
-                    ],
+                    ];
+
+//external accessible values
+var __ = {
+    width : 500,
+    height : 400,
     splitColor : "#C1573B",
     margin : {
               "top" : 15, 
@@ -49,7 +52,7 @@ var __ = {
                  "y" : 'n',
                  "mix" : 'nn'
                },
-    data : {x:[],y:[], class:[] },
+    data : {x:[],y:[] },
     splits : {},
     id : 'id',
     axes : {
@@ -62,8 +65,8 @@ var __ = {
             "y" : "y"
         }
     },
-    categoryColor : function(d) { return __.pointColors[0] },
-    class : {label:"", list:[]},
+    colorFn : function(d) { return pointColors[0] },
+    colorBy : {label:"", list:[], colors: pointColors },
     clear : true,
  };
 
@@ -114,9 +117,9 @@ var __ = {
 
   // side effects for setters
   var side_effects = d3.dispatch.apply(this,d3.keys(__))
-    .on("radius", function(d) { symbolSize = Math.pow(__.radius,2);})
-    .on("data", function(d) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
-    .on("class", setClassScales )
+    .on("radius", function(new_value) { symbolSize = Math.pow(__.radius,2);})
+    .on("data", function(new_value) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
+    .on("colorBy", setClassScales )
     .on("splits", parseSplits )
     .on("axes", updateAxisLabels );
    
@@ -408,7 +411,7 @@ function drawMultipleBarchart(data_points) {
       var f = new Array(stacks);
 
       _.each(data_array, function (point, index) {
-             e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.class.label]) ]++;
+             e[ index ] = d[ point[ __.axes.attr.x ] ] [  point[ __.axes.attr.y ] ] [ String(point[__.colorBy.label]) ]++;
       });
 
       var i = stacks -1;
@@ -454,7 +457,7 @@ function drawMultipleBarchart(data_points) {
                   .attr('transform', 
                     function(point, i) { 
                         return 'translate(' + 
-                              (scales.x(point[__.axes.attr.x]) + category_offset(String(point[__.class.label])) ) +
+                              (scales.x(point[__.axes.attr.x]) + category_offset(String(point[__.colorBy.label])) ) +
                                 ',' +
                               (scales.y(point[__.axes.attr.y] ) + band/2 - (e[i]*barHeight)) + ')';
                   })
@@ -552,7 +555,7 @@ function drawMultipleKDE(data_points) {
   kde_ensemble.enter()
         .append('g')
         .attr('class','kde_ensemble')
-        .style("fill", function(d) { return __.categoryColor(d.key);} );
+        .style("fill", function(d) { return __.colorFn(d.key);} );
 
   var kde_plot = kde_ensemble.selectAll('.kde_plot')
           .data(function(d) { 
@@ -599,7 +602,7 @@ function drawMultipleKDE(data_points) {
 function colorDataPoint(selector, point) {  
   selector
     .style('fill',function(point) {
-          return  __.categoryColor(String(point[__.class.label]));
+          return  __.colorFn(String(point[__.colorBy.label]));
     })
     .style('stroke', null);
   return selector;
@@ -893,7 +896,7 @@ function drawPartitionSpans() {
                     .attr('y',function(val) {return val[1];})
                     .attr('width', function(val) {return val[2];})
                     .attr('height',function(val) {return val[3];})
-                    .style('fill',function(d,i) { return __.partitionColors[i]})
+                    .style('fill',function(d,i) { return partitionColors[i]})
                     .style('fill-opacity',0.3)
                     .style('stroke','none')
                     .style('stroke-opacity','0.6')
@@ -1157,7 +1160,7 @@ function createKDEdata( cat_axis, num_axis ) {
 
       _.each(colorCategories, function(c) { 
         obj = {}; 
-        obj[__.class.label] = c;
+        obj[__.colorBy.label] = c;
         class_points = _.where(kde_points,obj);
         class_num_points[c] = _.pluck( class_points, __.axes.attr[num_axis]);
       });
@@ -1177,7 +1180,7 @@ function createKDEdata( cat_axis, num_axis ) {
       if ( colorCategories.length <= 1) return kde[category]['all'] = kde_temp;
 
       _.each(colorCategories, function(colorCat) { 
-         obj = {}; obj[__.class.label] = colorCat;
+         obj = {}; obj[__.colorBy.label] = colorCat;
          if (class_num_points[colorCat].length < 1) return;
          kde_temp = science.stats.kde().sample(class_num_points[colorCat]).bandwidth(bw).kernel(science.stats.kernel.gaussian); 
          kde[category][colorCat] = kde_temp;
@@ -1190,12 +1193,14 @@ function createKDEdata( cat_axis, num_axis ) {
 function setClassScales() {
 
   //if the class hasn't changed, don't modify it.
-  colorCategories = __.class.list.length ? _.map( __.class.list, String) : [undefined];
+  colorCategories = __.colorBy.list.length ? _.map( __.colorBy.list, String) : [undefined];
+
+  if ( _.isArray(__.colorBy.colors) && __.colorBy.colors.length ) { pointColors = __.colorBy.colors; }
 
   var numberOfCategories = colorCategories.length,
-      colorArray = _.first(__.pointColors, numberOfCategories) || __.pointColors[0];
+      colorArray = _.first(pointColors, numberOfCategories) || pointColors[0];
 
-  __.categoryColor = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
+  __.colorFn = numberOfCategories ? d3.scale.ordinal().domain(colorCategories).range(colorArray) : function() { return colorArray;};
 
 }
 
