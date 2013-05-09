@@ -106,24 +106,16 @@ define([
                     $('.classItem:not([data-class-label=\"' + classLabel+'\"])').css('opacity',0.3);
                     highlight_label = classLabel;
                     splitiscope
-                        .colorBy({
-                                label : labels.class ? labels.class : '',
-                                list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
-                                highlight : highlight_label
-                            })
-                    .render();
+                        .highlight( highlight_label )
+                        .render();
                 });
 
                 $('#classInfo').on('mouseout', '.classItem', function () {
                     $('.classItem').css('opacity', '');
                     highlight_label = null;
                     splitiscope
-                        .colorBy({
-                                label : labels.class ? labels.class : '',
-                                list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
-                                highlight : highlight_label
-                            })
-                    .render();
+                        .highlight('')
+                        .render();
                 });
 
                 $('#switch_axes').on('click', function (e,ui) {
@@ -300,7 +292,7 @@ define([
                             top: 10, left: 10, bottom: 30, right: 40
                 }
             })(plot_container)
-            .on('partition',function(split_obj) {
+            .on('partitioncomplete',function(split_obj) {
 
                 var keys = _.keys(split_obj);
                 var splitItem = _.object(keys, _.map(keys, function( feature ){
