@@ -65,14 +65,16 @@ var __ = {
             "y" : "y"
         }
     },
+    highlight : '',
     colorFn : function(d) { return pointColors[0] },
     colorBy : {label:"", list:[], colors: pointColors },
     clear : true,
+    partition : {}
  };
 
   _.extend(__, config);
 
-  var events = d3.dispatch.apply(this,["render", "resize", "highlight", "brush", "partition"].concat(d3.keys(__))),
+  var events = d3.dispatch.apply(this,["render", "resize", "highlight", "brush", "partitioncomplete"].concat(d3.keys(__))),
       outerWidth = function() { return __.width - __.margin.right - __.margin.left },
       outerHeight = function() { return __.height - __.margin.top - __.margin.bottom },
       plotWidth = function() { return outerWidth() - padding.right - padding.left},
@@ -121,6 +123,7 @@ var __ = {
     .on("data", function(new_value) { clearAllSplitSelections(); clearAllSplitPointers(); parseData(); console.log('splitscope: data loaded');})
     .on("colorBy", setClassScales )
     .on("splits", parseSplits )
+    .on("partition", setPartitions )
     .on("axes", updateAxisLabels );
    
   var splitiscope = function(selection) {
@@ -216,6 +219,13 @@ splitiscope.render = function() {
 
     return this;
 };
+
+function reRender() {
+  updateAxes();
+  drawData();
+  drawSplits();
+  drawPartitionSpans();
+}
 
 function drawSplitLabel() {
 
@@ -464,7 +474,7 @@ function drawMultipleBarchart(data_points) {
                   .call(colorDataPoint);
 
       function vertical_offset( point ) { return ( point[3] ) * barHeight; } 
-      function text_color( point ) { return addOffset( point ) ? '#fff' : null; }
+      function text_color( point ) { return addOffset( point ) ? '#ccc' : null; }
       function addOffset( point ) { return ( vertical_offset(point) > band/2); }
       
       function text_styling( selector, point ) {
@@ -555,7 +565,8 @@ function drawMultipleKDE(data_points) {
   kde_ensemble.enter()
         .append('g')
         .attr('class','kde_ensemble')
-        .style("fill", function(d) { return __.colorFn(d.key);} );
+        .style("fill", function(d) { return __.colorFn(d.key);} )
+        .style("fill-opacity", 0.3);
 
   var kde_plot = kde_ensemble.selectAll('.kde_plot')
           .data(function(d) { 
@@ -574,8 +585,11 @@ function drawMultipleKDE(data_points) {
 
   g.append('path')
       .attr("class","kde_area")
-      .style('fill-opacity',0.3)
       .style("stroke","none");
+
+  kde_ensemble.transition()
+      .duration(update_duration)
+      .call(colorKDEArea);
 
   kde_plot.transition().select('.kde_line')
       .duration(update_duration)
@@ -599,15 +613,25 @@ function drawMultipleKDE(data_points) {
 
 }
 
-function colorDataPoint(selector, point) {  
+function colorDataPoint(selector) {  
   selector
     .style('fill',function(point) {
           return  __.colorFn(String(point[__.colorBy.label]));
     })
+    .style('fill-opacity', function(point) { return __.highlight.length ? 
+      ( __.highlight === String(point[__.colorBy.label]) ? 
+        0.8 : 0.1 ) 
+        : 0.5;})
     .style('stroke', null);
   return selector;
 }
 
+function colorKDEArea(selector) {
+  selector
+      .style('fill-opacity', function(obj) { 
+        return __.highlight.length ? ( __.highlight === obj.key ? 0.8 : 0.1 ) : 0.3;
+      });
+}
 
 function clearDataPoints() {
   var data_points = data_surface.select('.data').selectAll('.data_point').data([],String);
@@ -758,6 +782,7 @@ function drawCategoricalAxisSplits ( axis ) {
                   else {
                     selectCategoricalSplitValue(val, axis );
                   }
+                  reRender();
               });
 
     splits.transition()
@@ -934,7 +959,7 @@ function drawPartitionSpans() {
                           split_obj[__.axes.attr.y] = { values : _.map(ySelectedVals, scales.y.invert) };
                         }
                       }
-                      events.partition( split_obj );
+                      events.partitioncomplete( split_obj );
                     });              
 
                 partitions
@@ -1002,10 +1027,7 @@ function selectCategoricalSplitValue(value, axis) {
   scales[axis].invert.range(new_domain);
   
   split_data[axis].span  = scales[axis](value) - ( band/2 * (axis === 'x' ? -1 : 1) );
-  updateAxes();
-  drawData();
-  drawSplits();
-  drawPartitionSpans();
+  
 }
 
 function removeCategoricalSplitValue(value, axis) {
@@ -1021,11 +1043,6 @@ function removeCategoricalSplitValue(value, axis) {
   scales[axis].invert.range(domain);
 
   split_data[axis].span  = len ? scales[axis](selected[axis][len-1]) - ( band/2 * (axis === 'x' ? -1 : 1)) : null;
-      
-  updateAxes();
-  drawData();
-  drawSplits();
-  drawPartitionSpans();
 }
 
 function clearAllSplitSelections() {
@@ -1088,6 +1105,22 @@ function parseData() {
   setDataScales(xVals, yVals);
 
   return splitiscope;
+}
+
+function setPartitions(obj ) {
+  clearAllSplitSelections();
+  var new_partition_obj = obj.value;
+  _.each(new_partition_obj, function(obj, key){
+    var axis = __.axes.attr.x === key ? 'x' : (__.axes.attr.y === key ? 'y' : '');
+    if (_.isEmpty(axis) ) return;
+    if ( _.isArray(obj.values) ) _.each(obj.values, function (val) { selectCategoricalSplitValue(val, axis);});
+    else if (_.isFinite(obj.high) && _.isFinite(obj.low) ) {
+      var domain = scales[axis].domain();
+      if (obj.high === domain[1]) selectSplitValue( obj.low, axis);
+      else selectSplitValue( obj.high, axis);
+    }
+  });
+  reRender();
 
 }
 
