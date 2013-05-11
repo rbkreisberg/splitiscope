@@ -9,15 +9,14 @@ require.config({
 
   "paths": {
       "jQuery": "../components/jquery/jquery",
-      "jQuery-ui": "../components/jquery-ui/ui/jquery-ui.custom",
+      "jQuery-ui": "../components/jquery-ui/ui/jquery-ui",
       "bootstrap": "vendor/bootstrap",
-      //"backbone": "../components/backbone/backbone",
+      "carve": "../components/carve/carve",
       "d3": "../components/d3/d3",
       "modernizr": "../components/modernizr",
       "queue": "../components/queue-async/queue",
       "underscore": "../components/underscore/underscore",
       "science" : "../components/science/science.v1",
-      "splitiscope": "vis/splitiscope",
       'hbs' : '../components/require-handlebars-plugin/hbs',
       'handlebars' : '../components/require-handlebars-plugin/Handlebars',
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
@@ -45,6 +44,10 @@ require.config({
       },
        "queue" : {
           "exports" : "queue"
+      },
+      "carve" : {
+        "deps" : ["d3","underscore","science"],
+        "exports" : "carve"
       },
       "crossfilter": {
         "exports" : "crossfilter"

@@ -1,7 +1,7 @@
 /*global define */
 define([
     'queue', 
-    'splitiscope',
+    'carve',
     'data',
     'filter',
     'hbs!templates/splititem',
