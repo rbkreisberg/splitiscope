@@ -179,7 +179,9 @@ module.exports = function (grunt) {
         // but still available if needed
         concat: {
             dist: {
-                src : ['.tmp/styles/main.css','<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css'],
+                src : ['.tmp/styles/main.css',
+                    '<%= yeoman.app %>/components/jquery-ui-bootstrap/{,*/}*.css',
+                    '<%= yeoman.app %>/components/carve/{,*/}*.css'],
                 dest : '.tmp/styles/main.css'
             }
         },
