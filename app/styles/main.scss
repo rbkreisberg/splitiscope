@@ -2,7 +2,6 @@
 $fontAwesomePath : '../components/font-awesome/font' !default;
 @import 'bootstrap';
 @import '../components/sass-bootstrap/lib/responsive';
-@import 'vis';
 
 .hero-unit {
   margin: 50px auto 0 auto;
@@ -90,8 +89,18 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
     overflow-y: auto; /* prevent horizontal scrollbar */
     overflow-x: hidden;
 }
+.ui-helper-hidden {
+  display: none;
+}
 .ui-helper-hidden-accessible {
-  width:100%;
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
 }
 
 body {
