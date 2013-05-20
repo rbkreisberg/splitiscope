@@ -42,7 +42,8 @@ module.exports = function (grunt) {
                 tasks: ['handlebars']
             },
             concat : {
-                files: ['.tmp/styles/{,*/}*.css'],
+                files: ['.tmp/styles/{,*/}*.css',
+			'<%= yeoman.app %>/components/carve/{,*/}*.css'],
                 tasks: ['concat']
             },
             livereload: {
