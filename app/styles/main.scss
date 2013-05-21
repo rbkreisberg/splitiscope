@@ -62,11 +62,9 @@ $fontAwesomePath : '../components/font-awesome/font' !default;
 
 #plot {
   height: (($gridColumnWidth * 10) + ($gridGutterWidth * (10 - 1))) * (3/4);
+  max-height: (($gridColumnWidth * 10) + ($gridGutterWidth * (10 - 1))) * (3/4);
   width : 100%;
-}
-.splitiscope {
-  height: 100%;
-  width: 100%;
+  display: block;
 }
 
 #legend {
