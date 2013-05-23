@@ -22,7 +22,7 @@ require.config({
       'json2' : '../components/require-handlebars-plugin/hbs/json2',
       'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
       'store' : '../components/store/store', //localStorage and sessionStorage
-      'crossfilter' : 'vendor/crossfilter' //need the newer crossfilter and can't use bower yet
+      'crossfilter' : '../components/crossfilter/crossfilter' //need the newer crossfilter and can't use bower yet
   },
   "shim": {
       "backbone": {

@@ -27,6 +27,7 @@ define([
 
             var keys, data, data_filter,
                 labels = {"x" : "", "y" : ""},
+                insistCategoricalValues = { "x":  [], "y" : [] },
                 group = {},
                 highlight_label = null;
 
@@ -125,7 +126,6 @@ define([
                     labels['y'] = x;
                     labels['x'] = $('#x_autocomplete').val();
                     updateSplitiscope();
-
                 });
 
                 $( split_list ).on('click', split_item, function (e,ui) {
@@ -213,12 +213,16 @@ define([
 
     }
 
+    function setInsistCategoricalValues() {
+    insistCategoricalValues = {"x" : [], "y" : []};
+    if (_.intersection(data_filter.getGroupLabels(labels.x, false), ["false","true"]).length) insistCategoricalValues.x = ["false","true"];
+    if (_.intersection(data_filter.getGroupLabels(labels.y, false), ["false","true"]).length) insistCategoricalValues.y = ["false","true"];
+    }
+
     function updateSplitiscope() {
         splitiscope
-        .axes({
-            "attr" : labels,
-            "labels" : labels 
-        })
+        .axisLabel(labels)
+        .axisAttribute(labels)
         .colorBy({
             label : labels.class ? labels.class : '',
             list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
@@ -229,16 +233,18 @@ define([
     }
 
     function newSplitiscope() {
+        setInsistCategoricalValues();
+
         splitiscope
         .clear(true)
         .colorBy({
             label : labels.class ? labels.class : '',
             list : data_filter.has( labels.class ) ? data_filter.getGroupLabels( labels.class ) : []
         })
-        .axes({
-            "attr" : labels,
-            "labels" : labels 
-        })
+        .axisLabel(labels)
+        .axisAttribute(labels)
+        .axisInsistCategoricalValues(insistCategoricalValues)
+        .axisValueDictionary( { "x" : { "true" : "TRUE"}})
         .data(data_filter.getRows())
         .render();
     }
