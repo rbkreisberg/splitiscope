@@ -222,7 +222,7 @@ define([
     function updateSplitiscope() {
         splitiscope
         .axisLabel(labels)
-        .axisAttribute(labels)
+        .axisKey(labels)
         .colorBy({
             label : labels.class ? labels.class : '',
             list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
@@ -242,7 +242,7 @@ define([
             list : data_filter.has( labels.class ) ? data_filter.getGroupLabels( labels.class ) : []
         })
         .axisLabel(labels)
-        .axisAttribute(labels)
+        .axisKey(labels)
         .axisInsistCategoricalValues(insistCategoricalValues)
         .axisValueDictionary( { "x" : { "true" : "TRUE"}})
         .data(data_filter.getRows())
