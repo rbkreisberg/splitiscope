@@ -106,7 +106,7 @@ define([
                     var classLabel = $(this).attr('data-class-label');
                     $('.classItem:not([data-class-label=\"' + classLabel+'\"])').css('opacity',0.3);
                     highlight_label = classLabel;
-                    splitiscope
+                    carve
                         .highlight( highlight_label )
                         .render();
                 });
@@ -114,7 +114,7 @@ define([
                 $('#classInfo').on('mouseout', '.classItem', function () {
                     $('.classItem').css('opacity', '');
                     highlight_label = null;
-                    splitiscope
+                    carve
                         .highlight('')
                         .render();
                 });
@@ -125,7 +125,7 @@ define([
                     $('#y_autocomplete').val( x );
                     labels['y'] = x;
                     labels['x'] = $('#x_autocomplete').val();
-                    updateSplitiscope();
+                    updateCarve();
                 });
 
                 $( split_list ).on('click', split_item, function (e,ui) {
@@ -199,7 +199,7 @@ define([
             total : data_filter.currentSize()
         }));
 
-        var color = splitiscope.colorFn();
+        var color = carve.colorFn();
         if ( data_filter.has(labels.class) ) {
             var group = _.map( data_filter.getGroupEntries( labels.class ), function(group_obj) {
                 group_obj.color = color(group_obj.key);
@@ -219,8 +219,8 @@ define([
     if (_.intersection(data_filter.getGroupLabels(labels.y, false), ["false","true"]).length) insistCategoricalValues.y = ["false","true"];
     }
 
-    function updateSplitiscope() {
-        splitiscope
+    function updateCarve() {
+        carve
         .axisLabel(labels)
         .axisKey(labels)
         .colorBy({
@@ -232,10 +232,10 @@ define([
         .render();
     }
 
-    function newSplitiscope() {
+    function newCarve() {
         setInsistCategoricalValues();
 
-        splitiscope
+        carve
         .clear(true)
         .colorBy({
             label : labels.class ? labels.class : '',
@@ -252,17 +252,17 @@ define([
     function newDataDisplay() {
         if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;
 
-        if( _.isUndefined(splitiscope)) {
+        if( _.isUndefined(carve)) {
             plot();
             return;
         }
-        newSplitiscope();
+        newCarve();
         updateTotalsTemplates();
     }
 
     function refreshDisplays() {
         if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;
-        updateSplitiscope();
+        updateCarve();
         updateTotalsTemplates();
     }
 
@@ -288,11 +288,11 @@ define([
 
     selectElementHooks();
 
-    var splitiscope;
+    var carve;
     var plot_container = '#plot';
     var format = d3.format('.3f');
     var plot = function() {
-            splitiscope = split_vis({
+            carve = split_vis({
                 radius: 8,
                 margin : {
                             top: 10, left: 10, bottom: 30, right: 40
