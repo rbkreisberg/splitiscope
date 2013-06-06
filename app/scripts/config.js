@@ -8,21 +8,21 @@ require.config({
   ],
 
   "paths": {
-      "jQuery": "../components/jquery/jquery",
-      "jQuery-ui": "../components/jquery-ui/ui/jquery-ui",
+      "jQuery": "../bower_components/jquery/jquery",
+      "jQuery-ui": "../bower_components/jquery-ui/ui/jquery-ui",
       "bootstrap": "vendor/bootstrap",
-      "carve": "../components/carve/carve",
-      "d3": "../components/d3/d3",
-      "modernizr": "../components/modernizr",
-      "queue": "../components/queue-async/queue",
-      "underscore": "../components/underscore/underscore",
-      "science" : "../components/science/science.v1",
-      'hbs' : '../components/require-handlebars-plugin/hbs',
-      'handlebars' : '../components/require-handlebars-plugin/Handlebars',
-      'json2' : '../components/require-handlebars-plugin/hbs/json2',
-      'i18nprecompile' : '../components/require-handlebars-plugin/hbs/i18nprecompile',
-      'store' : '../components/store/store', //localStorage and sessionStorage
-      'crossfilter' : '../components/crossfilter/crossfilter' //need the newer crossfilter and can't use bower yet
+      "carve": "../bower_components/carve/carve",
+      "d3": "../bower_components/d3/d3",
+      "modernizr": "../bower_components/modernizr",
+      "queue": "../bower_components/queue-async/queue",
+      "underscore": "../bower_components/underscore/underscore",
+      "science" : "../bower_components/science/science.v1",
+      'hbs' : '../bower_components/require-handlebars-plugin/hbs',
+      'handlebars' : '../bower_components/require-handlebars-plugin/Handlebars',
+      'json2' : '../bower_components/require-handlebars-plugin/hbs/json2',
+      'i18nprecompile' : '../bower_components/require-handlebars-plugin/hbs/i18nprecompile',
+      'store' : '../bower_components/store/store', //localStorage and sessionStorage
+      'crossfilter' : '../bower_components/crossfilter/crossfilter' //need the newer crossfilter and can't use bower yet
   },
   "shim": {
       "backbone": {

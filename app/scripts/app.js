@@ -7,7 +7,7 @@ define([
     'hbs!templates/splititem',
     'hbs!templates/totals',
     'hbs!templates/classList',
-], function (queue, split_vis, warehouse, filter, splitItemTemplate, totalsItemTemplate, classListTemplate) {
+], function (queue, carveVis, warehouse, filter, splitItemTemplate, totalsItemTemplate, classListTemplate) {
     'use strict';
 
     function errorMsg(msg) {
@@ -253,7 +253,7 @@ define([
         if (!( data.length && data[0][labels.x] && data[0][labels.y])) return;
 
         if( _.isUndefined(carve)) {
-            plot();
+            plotCarve();
             return;
         }
         newCarve();
@@ -291,8 +291,8 @@ define([
     var carve;
     var plot_container = '#plot';
     var format = d3.format('.3f');
-    var plot = function() {
-            carve = split_vis({
+   function plotCarve() {
+            carve = carveVis({
                 radius: 8,
                 margin : {
                             top: 10, left: 10, bottom: 30, right: 40
