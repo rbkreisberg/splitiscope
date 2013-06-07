@@ -26,7 +26,7 @@ define([
            var data, data_indices;
 
             var keys, data, data_filter,
-                labels = {"x" : "", "y" : ""},
+                labels = {"x" : "", "y" : "", list : []},
                 insistCategoricalValues = { "x":  [], "y" : [] },
                 group = {},
                 highlight_label = null;
@@ -200,16 +200,36 @@ define([
         }));
 
         var color = carve.colorFn();
+
         if ( data_filter.has(labels.class) ) {
             var group = _.map( data_filter.getGroupEntries( labels.class ), function(group_obj) {
                 group_obj.color = color(group_obj.key);
                 return group_obj;
             });
+
             $('#classInfo').html(classListTemplate({
                 classLabel: labels.class,
                 classList: group
             }));
-        } else { $('#classInfo').html(""); }
+
+            $('#classList').sortable({
+                    placeholder: 'classItem_placeholder',
+                    forcePlaceholderSize: true,
+                    containment:'document',
+                    cursor: 'move',
+                    axis: 'y',
+                    opacity: 0.7,
+                    scroll: true,
+                    scrollSensitivity: 2,
+                    scrollSpeed: 20,
+                    stop : function() {
+                        labels.list = $('li.classItem').map( function (el) { return $(this).attr('data-class-label');}).get();
+                        updateCarve();
+                    }
+                }).disableSelection();
+
+            labels.list = $('li.classItem').map( function (el) { return $(this).attr('data-class-label');}).get();
+        } else { $('#classInfo').html(""); labels.list = []; }
 
     }
 
@@ -220,12 +240,13 @@ define([
     }
 
     function updateCarve() {
+        labels.list = labels.list.length ? labels.list : data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [];
         carve
         .axisLabel(labels)
         .axisKey(labels)
         .colorBy({
             label : labels.class ? labels.class : '',
-            list: data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [],
+            list: labels.list,
             highlight : highlight_label
         })
         .data(data_filter.getRows())

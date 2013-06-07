@@ -1,21 +1,21 @@
 {{classLabel}}
 <br/>
-<table id="classList" class="unstyled">
+<ul id="classList" class="unstyled">
 {{#each classList}}}
-<tr class="classItem" data-class-label="{{key}}">
-<td style="text-align:right">
-<span 
+<li class="classItem" data-class-label="{{key}}">
+<span style="text-align:right;
 {{#if color}}
-style="color: {{color}};"
+color: {{color}};
 {{/if}}
->{{key}}</span>
-</td>
-<td><span 
+">
+{{key}}</span>
+<span 
 {{#if color}}
 style="padding-right:{{value}}px;background: linear-gradient(to bottom right, #ffffff, {{color}});"
 {{/if}}
 >
 {{value}}
-</tr>
+</span>
+</li>
 {{/each}}
-</table>
+</ul>
