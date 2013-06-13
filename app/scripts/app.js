@@ -265,7 +265,7 @@ define([
         .axisLabel(labels)
         .axisKey(labels)
         .axisInsistCategoricalValues(insistCategoricalValues)
-        .axisValueDictionary( { "x" : { "true" : "TRUE"}})
+        .axisValueDictionary( { "x" : { "true" : "true"}})
         .data(data_filter.getRows())
         .render();
     }
@@ -302,6 +302,7 @@ define([
 
        $('#class_autocomplete_cancel').on('click', function (e, ui) {
             labels['class'] = null;
+            labels['list'] = [];
             $('#class_autocomplete').val("");
             refreshDisplays();       
       });
