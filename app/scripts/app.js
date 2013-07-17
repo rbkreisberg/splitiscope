@@ -240,12 +240,18 @@ define([
     }
 
     function updateCarve() {
-        labels.list = labels.list.length ? labels.list : data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [];
+        if (labels.class) {
+            labels.list = labels.list.length ? labels.list : data_filter.has(labels.class) ? data_filter.getGroupLabels(labels.class) : [];
+        }
+        else {
+            labels.class = '';
+            labels.list = [];
+        }
         carve
         .axisLabel(labels)
         .axisKey(labels)
         .colorBy({
-            label : labels.class ? labels.class : '',
+            label : labels.class,
             list: labels.list,
             highlight : highlight_label
         })
