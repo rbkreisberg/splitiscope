@@ -17,6 +17,7 @@
     "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~3.0.2",
     "crossfilter": "git://github.com/square/crossfilter.git#~1.2.0",
     "science": "git://github.com/jasondavies/science.js.git",
+    "carve": "git://github.com/rbkreisberg/carve.git#~0.0.2",
     "store": "git://github.com/marcuswestin/store.js.git"
   },
   "devDependencies": {
