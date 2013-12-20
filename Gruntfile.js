@@ -1,9 +1,9 @@
 // Generated on 2013-05-23 using generator-webapp 0.2.2
 'use strict';
-var LIVERELOAD_PORT = 35729;
-var lrSnippet = require('connect-livereload')({port: LIVERELOAD_PORT});
-var mountFolder = function (connect, dir) {
-    return connect.static(require('path').resolve(dir));
+var SERVER_PORT = 9000;
+var yeomanConfig = {
+    app: 'app',
+    dist: 'dist'
 };
 
 // # Globbing
@@ -15,6 +15,7 @@ var mountFolder = function (connect, dir) {
 module.exports = function (grunt) {
     // load all grunt tasks
     require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
+    var proxySnippet = require('grunt-connect-proxy/lib/utils').proxyRequest;
 
     // configurable paths
     var yeomanConfig = {
@@ -41,9 +42,9 @@ module.exports = function (grunt) {
                 files: ['<%= yeoman.app %>/styles/{,*/}*.{scss,sass}'],
                 tasks: ['compass:server']
             },
-            livereload: {
+           livereload: {
                 options: {
-                    livereload: LIVERELOAD_PORT
+                    livereload: '<%= connect.options.livereload %>'
                 },
                 files: [
                     '<%= yeoman.app %>/*.html',
@@ -55,44 +56,67 @@ module.exports = function (grunt) {
         },
         connect: {
             options: {
-                port: 9000,
+                port: SERVER_PORT,
+                livereload: 35729,
                 // change this to '0.0.0.0' to access the server from outside
                 hostname: '0.0.0.0'
             },
+            proxies: [
+                {
+                    context : '/query',  //identify request to proxy via URL
+                    host : 'breve',  //config this or proxy won't work
+                    port : 3000, //config this or proxy won't work
+                    // https : false,
+                    changeOrigin : false,
+                    rewrite: {
+                        '^/query' : ''  //remove /mongo from proxied request
+                    }
+                }
+            ],
             livereload: {
                 options: {
-                    middleware: function (connect) {
-                        return [
-                            mountFolder(connect, '.tmp'),
-                            mountFolder(connect, yeomanConfig.app),
-                            lrSnippet
-                        ];
+                    open: true,
+                    base: [
+                        '.tmp',
+                        '<%= yeoman.app %>'
+                    ],
+                    middleware: function(connect, options) {
+                        // Same as in grunt-contrib-connect
+                        var middlewares = [];
+                        var directory = options.directory ||
+                            options.base[options.base.length - 1];
+                        if (!Array.isArray(options.base)) {
+                            options.base = [options.base];
+                        }
+
+                        // Add Proxy middleware
+                        middlewares.push(proxySnippet);
+
+                        // Same as in grunt-contrib-connect
+                        options.base.forEach(function(base) {
+                            middlewares.push(connect.static(base));
+                        });
+
+                        middlewares.push(connect.directory(directory));
+                        return middlewares;
                     }
                 }
             },
             test: {
                 options: {
-                    middleware: function (connect) {
-                        return [
-                            mountFolder(connect, '.tmp'),
-                            mountFolder(connect, 'test')
-                        ];
-                    }
+                    base: [
+                        '.tmp',
+                        'test',
+                        '<%= yeoman.app %>'
+                    ]
                 }
             },
             dist: {
                 options: {
-                    middleware: function (connect) {
-                        return [
-                            mountFolder(connect, yeomanConfig.dist)
-                        ];
-                    }
+                    open: true,
+                    base: '<%= yeoman.dist %>',
+                    livereload: false
                 }
-            }
-        },
-        open: {
-            server: {
-                path: 'http://localhost:<%= proxy.proxy1.options.port %>'
             }
         },
         clean: {
@@ -316,28 +340,19 @@ module.exports = function (grunt) {
             all: {
                 rjsConfig: '<%= yeoman.app %>/scripts/main.js'
             }
-        },
-           proxy : {
-            proxy1 : {
-                options : {
-                    port    : 9001,               // start proxy server, listening to the port 9001
-                    router : '<%= proxyConfig.router %>'
-                }
-            }
         }
     });
 
     grunt.registerTask('server', function (target) {
         if (target === 'dist') {
-            return grunt.task.run(['build', 'open', 'connect:dist:keepalive']);
+            return grunt.task.run(['build', 'connect:dist:keepalive']);
         }
 
         grunt.task.run([
             'clean:server',
             'concurrent:server',
+            'configureProxies',            
             'connect:livereload',
-            'proxy',
-            'open',
             'watch'
         ]);
     });
